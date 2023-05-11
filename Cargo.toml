@@ -2,7 +2,10 @@
 name = "sysy_compiler"
 version = "0.1.0"
 edition = "2021"
+authors = ["Yifan Huang <1900012913@pku.edu.cn>", ]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[build-dependencies]
+lalrpop = "0.20.0"
 
 [dependencies]
+lalrpop-util = { version = "0.20.0", features = ["lexer"] }
