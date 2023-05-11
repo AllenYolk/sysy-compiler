@@ -1,9 +1,7 @@
-use lalrpop_util::lalrpop_mod;
 use std::env;
 use std::process::exit;
 use std::fs;
-
-lalrpop_mod!(sysy);
+use sysy_compiler::astgen;
 
 #[derive(Debug)]
 enum Mode {
@@ -57,20 +55,22 @@ Usage 2: <path-to-sysy_compiler> MODE INPUT -o OUTPUT
 "#;
 
 fn main() {
+    // parse the command line arguments
     let Ok(Cli{mode, input, output}) = Cli::parse() else {
         eprintln!("Invalid Command Line Argument!\n{}", CLI_HELP);
         exit(-1)
     };
+    println!("{:?}, {}, {}", mode, input, output);
+
+    // read the input source file
     let Ok(input_content) = fs::read_to_string(&input) else {
         eprintln!("Invalid SysY Input File: {}", input);
         exit(-1);
     };
 
-    let Ok(ast) = sysy::CompUnitParser::new().parse(&input_content) else {
-        eprintln!("Parsing Error");
+    let Ok(ast) = astgen::parse_sysy(&input_content) else {
+        eprintln!("Parsing Error!");
         exit(-1);
     };
-
-    println!("{:?}, {}, {}", mode, input, output);
-    println!("AST: {}", ast);
+    dbg!(ast);
 }
