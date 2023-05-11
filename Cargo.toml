@@ -8,4 +8,5 @@ authors = ["Yifan Huang <1900012913@pku.edu.cn>", ]
 lalrpop = "0.20.0"
 
 [dependencies]
+koopa = "0.0.6"
 lalrpop-util = { version = "0.20.0", features = ["lexer"] }

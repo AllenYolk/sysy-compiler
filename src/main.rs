@@ -1,14 +1,6 @@
 use std::env;
 use std::process::exit;
-use std::fs;
-use sysy_compiler::astgen;
-
-#[derive(Debug)]
-enum Mode {
-    Koopa,
-    Riscv,
-    Perf,
-}
+use sysy_compiler::{Mode, RunError};
 
 struct Cli {
     mode: Mode,
@@ -33,12 +25,12 @@ impl Cli {
                     "-perf" => Mode::Perf,
                     _ => return Err(()),
                 };
-                Ok(Self { 
-                    mode: mode_converted, 
-                    input: input_, 
-                    output: output_
+                Ok(Self {
+                    mode: mode_converted,
+                    input: input_,
+                    output: output_,
                 })
-            },
+            }
             _ => Err(()),
         }
     }
@@ -57,20 +49,32 @@ Usage 2: <path-to-sysy_compiler> MODE INPUT -o OUTPUT
 fn main() {
     // parse the command line arguments
     let Ok(Cli{mode, input, output}) = Cli::parse() else {
-        eprintln!("Invalid Command Line Argument!\n{}", CLI_HELP);
+        eprintln!("Error: invalid command line argument!\n{}", CLI_HELP);
         exit(-1)
     };
-    println!("{:?}, {}, {}", mode, input, output);
+    println!("mode={:?}, input={}, output={}", mode, input, output);
 
-    // read the input source file
-    let Ok(input_content) = fs::read_to_string(&input) else {
-        eprintln!("Invalid SysY Input File: {}", input);
-        exit(-1);
-    };
-
-    let Ok(ast) = astgen::parse_sysy(&input_content) else {
-        eprintln!("Parsing Error!");
-        exit(-1);
-    };
-    dbg!(ast);
+    match sysy_compiler::run(mode, &input, &output) {
+        Err(e) => {
+            match e {
+                RunError::ReadFileError => {
+                    eprintln!("Error: cannot read input file {}!", &input);
+                },
+                RunError::WriteFileError => {
+                    eprintln!("Error: cannot write file {}!", &output)
+                }
+                RunError::Sysy2AstError => {
+                    eprintln!("Error: cannot convert SysY to AST!");
+                },
+                RunError::Ast2KoopaError => {
+                    eprintln!("Error: cannot convert AST to Koopa progra!");
+                },
+                RunError::NotImplementedError => {
+                    eprintln!("Error: not implemented");
+                },
+            }
+            exit(-1);
+        }
+        Ok(_) => (),
+    }
 }
