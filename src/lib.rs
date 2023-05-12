@@ -14,6 +14,7 @@ pub enum RunError {
     WriteFileError,
     Sysy2AstError,
     Ast2KoopaError,
+    Koopa2TextError,
     NotImplementedError,
 }
 
@@ -35,11 +36,13 @@ pub fn run(mode: Mode, input: &str, output: &str) -> Result<(), RunError> {
     };
 
     // convert the Koopa program to text form
-    let text = irgen::get_program_text(&program);
+    let Ok(text) = irgen::get_program_text(&program) else {
+        return Err(RunError::Koopa2TextError);
+    };
 
     match mode {
         Mode::Koopa => {
-            let Ok(_) = fs::write(output, text.unwrap()) else {
+            let Ok(_) = fs::write(output, text) else {
                 return Err(RunError::WriteFileError);
             };
         },

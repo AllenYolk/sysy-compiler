@@ -20,7 +20,7 @@ impl KoopaGenerate for FuncDef {
     type Return = ();
 
     fn generate(&self, program: &mut Program) -> Result<Self::Return, ()> {
-        let mut func_data = FunctionData::with_param_names(
+        let func_data = FunctionData::with_param_names(
             format!("@{}", self.ident), 
             Vec::new(), 
             self.func_type.generate(program)?,
