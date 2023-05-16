@@ -1,76 +1,41 @@
 use crate::astgen::ast::*;
-use koopa::ir::*;
-use koopa::ir::builder_traits::*;
 
-pub trait KoopaGenerate {
-    type Return;
-
-    fn generate(&self, program: &mut Program) -> Result<Self::Return, ()>;
+pub trait KoopaTextGenerate {
+    fn generate(&self) -> Result<String, ()>;
 }
 
-impl KoopaGenerate for CompUnit {
-    type Return = ();
-
-    fn generate(&self, program: &mut Program) -> Result<Self::Return, ()> {
-        self.func_def.generate(program)
+impl KoopaTextGenerate for CompUnit {
+    fn generate(&self) -> Result<String, ()> {
+        self.func_def.generate()
     }
 }
 
-impl KoopaGenerate for FuncDef {
-    type Return = ();
-
-    fn generate(&self, program: &mut Program) -> Result<Self::Return, ()> {
-        let func_data = FunctionData::with_param_names(
-            format!("@{}", self.ident), 
-            Vec::new(), 
-            self.func_type.generate(program)?,
-        );
-        let return_value = self.block.generate(program)?;
-        let func = program.new_func(func_data);
-        let func_data = program.func_mut(func);
-
-        let entry_bb = func_data
-            .dfg_mut()
-            .new_bb()
-            .basic_block(Some("%entry".into()));
-        func_data.layout_mut().bbs_mut().extend([entry_bb]);
-
-        let zero_v = func_data.dfg_mut().new_value().integer(return_value);
-        let ret_v = func_data.dfg_mut().new_value().ret(Some(zero_v));
-        func_data
-            .layout_mut()
-            .bb_mut(entry_bb)
-            .insts_mut()
-            .extend([ret_v]);
-
-        
-        Ok(())
+impl KoopaTextGenerate for FuncDef {
+    fn generate(&self) -> Result<String, ()> {
+        let text = format!("fun @{}(): {} {{\n{}\n}}", self.ident, self.func_type.generate()?, self.block.generate()?);
+        Ok(text)
     }
 }
 
-impl KoopaGenerate for FuncType {
-    type Return = Type;
-
-    fn generate(&self, program: &mut Program) -> Result<Self::Return, ()> {
+impl KoopaTextGenerate for FuncType {
+    fn generate(&self) -> Result<String, ()> {
         match self {
-            Self::Int => Ok(Type::get_i32()),
+            Self::Int => Ok(String::from("i32")),
             // _ => Err(()), 
         }
     }
 }
 
-impl KoopaGenerate for Block {
-    type Return = i32;
-
-    fn generate(&self, program: &mut Program) -> Result<Self::Return, ()> {
-        self.stmt.generate(program)
+impl KoopaTextGenerate for Block {
+    fn generate(&self) -> Result<String, ()> {
+        let text = format!("%entry:\n{}", self.stmt.generate()?);
+        Ok(text)
     }
 }
 
-impl KoopaGenerate for Stmt {
-    type Return = i32;
-
-    fn generate(&self, program: &mut Program) -> Result<Self::Return, ()> {
-        Ok(self.num)
+impl KoopaTextGenerate for Stmt {
+    fn generate(&self) -> Result<String, ()> {
+        let text = format!("  ret {}", self.num);
+        Ok(text)
     }
 }

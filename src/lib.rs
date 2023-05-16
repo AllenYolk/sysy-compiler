@@ -13,8 +13,8 @@ pub enum RunError {
     ReadFileError,
     WriteFileError,
     Sysy2AstError,
-    Ast2KoopaError,
-    Koopa2TextError,
+    Ast2KoopaTextError,
+    KoopaText2ProgramError,
     NotImplementedError,
 }
 
@@ -25,32 +25,27 @@ pub fn run(mode: Mode, input: &str, output: &str) -> Result<(), RunError> {
     };
 
     // parse the SysY file and generate the AST
-    let Ok(ast) = astgen::parse_sysy(&input_content) else {
+    let Ok(ast) = astgen::parse_sysy_to_ast(&input_content) else {
         return Err(RunError::Sysy2AstError);
     };
     dbg!(&ast);
 
-    // scan the AST and get the Koopa program
-    let Ok(program) = irgen::parse_ast(&ast) else {
-        return Err(RunError::Ast2KoopaError);
+    // scan the AST and get the Koopa text
+    let Ok(text) = irgen::parse_ast_to_text(&ast) else {
+        return Err(RunError::Ast2KoopaTextError);
     };
 
-    // convert the Koopa program to text form
-    let Ok(text) = irgen::get_program_text(&program) else {
-        return Err(RunError::Koopa2TextError);
+    if let Mode::Koopa = mode {
+        let Ok(_) = fs::write(output, text) else {
+            return Err(RunError::WriteFileError);
+        };
+        return Ok(());
+    } 
+
+    // convert the Koopa text to Koopa program
+    let Ok(_program) = irgen::get_program(&text) else {
+        return Err(RunError::KoopaText2ProgramError);
     };
 
-    match mode {
-        Mode::Koopa => {
-            let Ok(_) = fs::write(output, text) else {
-                return Err(RunError::WriteFileError);
-            };
-        },
-        _ => { 
-            return Err(RunError::NotImplementedError); 
-        }
-    }
-    
-
-    Ok(())
+    return Err(RunError::NotImplementedError); 
 }

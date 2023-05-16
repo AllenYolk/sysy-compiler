@@ -66,10 +66,10 @@ fn main() {
                 RunError::Sysy2AstError => {
                     eprintln!("Error: cannot convert SysY to AST!");
                 },
-                RunError::Ast2KoopaError => {
-                    eprintln!("Error: cannot convert AST to Koopa program!");
+                RunError::Ast2KoopaTextError => {
+                    eprintln!("Error: cannot convert AST to Koopa text!");
                 },
-                RunError::Koopa2TextError => {
+                RunError::KoopaText2ProgramError => {
                     eprintln!("Error: cannot convert Koopa program to text!");
                 }
                 RunError::NotImplementedError => {

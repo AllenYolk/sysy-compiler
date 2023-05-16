@@ -1,10 +1,9 @@
 mod kpgen;
 
 use crate::astgen::ast::*;
-use koopa::back::KoopaGenerator;
-use koopa::ir::builder_traits::*;
+use koopa::front::Driver;
 use koopa::ir::*;
-use kpgen::KoopaGenerate;
+use kpgen::KoopaTextGenerate;
 
 #[allow(dead_code)]
 const CORRECT_PROGRAM_TEXT: &str = r#"fun @main(): i32 {
@@ -13,57 +12,26 @@ const CORRECT_PROGRAM_TEXT: &str = r#"fun @main(): i32 {
 }
 "#;
 
-/// Convert the AST to the Koopa program.
-pub fn parse_ast(ast: &CompUnit) -> Result<Program, ()> {
-    // create an empty Koopa program
-    let mut program = Program::new();
-
+/// Convert the AST to the Koopa text.
+pub fn parse_ast_to_text(ast: &CompUnit) -> Result<String, ()> {
     // scan the AST recursively, and fill things into the Koopa program
-    ast.generate(&mut program)?;
-    Ok(program)
+    // ast.generate(&mut program)?;
+    ast.generate()
 }
 
-/// Convert a Koopa program to its text form.
-pub fn get_program_text(program: &Program) -> Result<String, ()> {
-    let mut gen = KoopaGenerator::new(Vec::new());
-    gen.generate_on(program).map_err(|_| ())?;
+/// Convert a Koopa text to Koopa program.
+pub fn get_program(text: &str) -> Result<Program, ()> {
+    let driver: Driver<_> = text.into();
 
-    match std::str::from_utf8(&gen.writer()) {
-        Ok(text) => Ok(String::from(text)),
-        Err(_) => Err(()),
-    }
+    driver.generate_program().map_err(|_| ())
 }
 
 #[cfg(test)]
 mod tests {
-    use koopa::ir::builder_traits::{BasicBlockBuilder, ValueBuilder};
-
     use super::*;
 
     #[test]
-    fn program2text_test() {
-        let mut program = Program::new();
-        let main_f = program.new_func(FunctionData::with_param_names(
-            "@main".into(),
-            Vec::new(),
-            Type::get_i32(),
-        ));
-        let main_fd = program.func_mut(main_f);
-        let entry_bb = main_fd
-            .dfg_mut()
-            .new_bb()
-            .basic_block(Some("%entry".into()));
-        main_fd.layout_mut().bbs_mut().extend([entry_bb]);
-
-        let zero_v = main_fd.dfg_mut().new_value().integer(0);
-        let ret_v = main_fd.dfg_mut().new_value().ret(Some(zero_v));
-        main_fd
-            .layout_mut()
-            .bb_mut(entry_bb)
-            .insts_mut()
-            .push_key_back(ret_v)
-            .unwrap();
-
-        assert_eq!(CORRECT_PROGRAM_TEXT, get_program_text(&program).unwrap());
+    fn text2program_test() {
+        get_program(CORRECT_PROGRAM_TEXT).unwrap();
     }
 }
