@@ -59,22 +59,25 @@ fn main() {
             match e {
                 RunError::ReadFileError => {
                     eprintln!("Error: cannot read input file {}!", &input);
-                },
+                }
                 RunError::WriteFileError => {
                     eprintln!("Error: cannot write file {}!", &output)
                 }
                 RunError::Sysy2AstError => {
                     eprintln!("Error: cannot convert SysY to AST!");
-                },
+                }
                 RunError::Ast2KoopaTextError => {
                     eprintln!("Error: cannot convert AST to Koopa text!");
-                },
+                }
                 RunError::KoopaText2ProgramError => {
-                    eprintln!("Error: cannot convert Koopa program to text!");
+                    eprintln!("Error: cannot convert Koopa text to program!");
+                }
+                RunError::KoopaProgram2RiscvError => {
+                    eprintln!("Error: cannot convert Koopa program to RISC-V");
                 }
                 RunError::NotImplementedError => {
                     eprintln!("Error: not implemented");
-                },
+                }
             }
             exit(-1);
         }

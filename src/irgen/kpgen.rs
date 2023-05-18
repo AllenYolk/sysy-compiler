@@ -12,7 +12,12 @@ impl KoopaTextGenerate for CompUnit {
 
 impl KoopaTextGenerate for FuncDef {
     fn generate(&self) -> Result<String, ()> {
-        let text = format!("fun @{}(): {} {{\n{}\n}}", self.ident, self.func_type.generate()?, self.block.generate()?);
+        let text = format!(
+            "fun @{}(): {} {{\n{}\n}}",
+            self.ident,
+            self.func_type.generate()?,
+            self.block.generate()?
+        );
         Ok(text)
     }
 }
@@ -21,7 +26,7 @@ impl KoopaTextGenerate for FuncType {
     fn generate(&self) -> Result<String, ()> {
         match self {
             Self::Int => Ok(String::from("i32")),
-            // _ => Err(()), 
+            // _ => Err(()),
         }
     }
 }
