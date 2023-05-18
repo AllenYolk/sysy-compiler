@@ -1,5 +1,5 @@
-use koopa::ir::*;
 use koopa::ir::entities::*;
+use koopa::ir::*;
 
 pub struct ProgramContext<'a> {
     pub program: &'a Program,
@@ -11,14 +11,14 @@ impl<'a> ProgramContext<'a> {
     /// Construct a new program context.
     pub fn new(program: &'a Program) -> Self {
         Self {
-            program, 
-            func: None, 
+            program,
+            func: None,
         }
     }
 
     /// Given a `Value` handler, return the corresponding `ValueData` in the current program context
     pub fn get_value_data(&self, val: Value) -> Option<&'a ValueData> {
-        // `Value` has implemented the Copy trait! 
+        // `Value` has implemented the Copy trait!
         let Some(cur_func) = self.func else {
             return None;
         };

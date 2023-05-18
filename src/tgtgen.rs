@@ -1,9 +1,9 @@
-mod rvgen;
 mod context;
+mod rvgen;
 
+use context::ProgramContext;
 use koopa::ir::*;
 use rvgen::RiscvGenerate;
-use context::ProgramContext;
 
 #[allow(dead_code)]
 const CORRECT_RISCV_TEXT: &str = r#"  .text
