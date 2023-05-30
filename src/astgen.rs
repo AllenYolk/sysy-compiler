@@ -10,13 +10,13 @@ pub fn parse_sysy_to_ast(input: &str) -> Result<CompUnit, ()> {
 }
 
 #[cfg(test)]
-mod tests{
+mod tests {
     use super::*;
 
     fn astgen_test(input: &str) {
         let input_content = std::fs::read_to_string(input).unwrap();
         let ast = parse_sysy_to_ast(&input_content).unwrap();
-        dbg!(ast); 
+        dbg!(ast);
     }
 
     #[test]

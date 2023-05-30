@@ -26,14 +26,14 @@ pub struct Stmt {
 }
 
 #[derive(Debug)]
-pub struct Exp{
+pub struct Exp {
     pub exp: UnaryExp,
 }
 
 #[derive(Debug)]
 pub enum UnaryExp {
     Primary(PrimaryExp),
-    Unary(UnaryOp, Box<UnaryExp>)
+    Unary(UnaryOp, Box<UnaryExp>),
 }
 
 #[derive(Debug)]
