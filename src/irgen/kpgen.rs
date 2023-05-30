@@ -40,7 +40,7 @@ impl KoopaTextGenerate for Block {
 
 impl KoopaTextGenerate for Stmt {
     fn generate(&self) -> Result<String, ()> {
-        let text = format!("  ret {}", self.num);
+        let text = format!("  ret {}", 1);
         Ok(text)
     }
 }

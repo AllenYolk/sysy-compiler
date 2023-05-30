@@ -13,6 +13,8 @@ match {
     _
 }
 
+// Variables
+
 pub CompUnit: CompUnit = <func_def: FuncDef> => CompUnit { func_def };
 
 FuncDef: FuncDef = {
@@ -23,9 +25,29 @@ FuncType: FuncType = <ft: "int"> => FuncType::Int;
 
 Block: Block = "{" <stmt: Stmt> "}" => Block { stmt };
 
-Stmt: Stmt = "return" <num: Number> ";" => Stmt { num };
+Stmt: Stmt = "return" <exp: Exp> ";" => Stmt { exp };
+
+Exp: Exp = <exp: UnaryExp> => Exp { exp };
+
+UnaryExp: UnaryExp = {
+    <primary: PrimaryExp> => UnaryExp::Primary(primary),
+    <uop: UnaryOp> <uexp: UnaryExp> => UnaryExp::Unary(uop, Box::new(uexp)),
+}
+
+PrimaryExp: PrimaryExp = {
+    "(" <exp: Exp> ")" => PrimaryExp::Exp(Box::new(exp)),
+    <num: Number> => PrimaryExp::Num(num),
+}
+
+UnaryOp: UnaryOp = {
+    "+" => UnaryOp::Pos,
+    "-" => UnaryOp::Neg,
+    "!" => UnaryOp::Not,
+}
 
 Number: i32 = <num: IntConst> => num;
+
+// Terminals
 
 Ident: String = {
     r"[_a-zA-Z][_a-zA-Z0-9]*" => String::from(<>),

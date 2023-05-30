@@ -22,7 +22,31 @@ pub struct Block {
 
 #[derive(Debug)]
 pub struct Stmt {
-    pub num: Number,
+    pub exp: Exp,
+}
+
+#[derive(Debug)]
+pub struct Exp{
+    pub exp: UnaryExp,
+}
+
+#[derive(Debug)]
+pub enum UnaryExp {
+    Primary(PrimaryExp),
+    Unary(UnaryOp, Box<UnaryExp>)
+}
+
+#[derive(Debug)]
+pub enum PrimaryExp {
+    Exp(Box<Exp>),
+    Num(Number),
+}
+
+#[derive(Debug)]
+pub enum UnaryOp {
+    Pos,
+    Neg,
+    Not,
 }
 
 type Number = i32;

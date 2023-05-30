@@ -1,5 +1,4 @@
 use koopa::ir::entities::*;
-use koopa::ir::*;
 
 pub struct ProgramContext<'a> {
     pub program: &'a Program,

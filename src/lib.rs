@@ -10,6 +10,7 @@ pub enum Mode {
     Perf,
 }
 
+#[derive(Debug)]
 pub enum RunError {
     ReadFileError,
     WriteFileError,
@@ -30,13 +31,15 @@ pub fn run(mode: Mode, input: &str, output: &str) -> Result<(), RunError> {
     let Ok(ast) = astgen::parse_sysy_to_ast(&input_content) else {
         return Err(RunError::Sysy2AstError);
     };
-    println!("AST:\n\n{:#?}", &ast);
+    println!("{}\nAST:\n", "=====".repeat(20));
+    println!("{:#?}", &ast);
 
     // scan the AST and get the Koopa text
     let Ok(text) = irgen::parse_ast_to_koopa_text(&ast) else {
         return Err(RunError::Ast2KoopaTextError);
     };
-    println!("\nKoopa:\n\n{}", &text);
+    println!("{}\nKoopa:\n", "=====".repeat(20));
+    println!("{}", &text);
 
     // write Koopa text to file
     if let Mode::Koopa = mode {
@@ -55,7 +58,8 @@ pub fn run(mode: Mode, input: &str, output: &str) -> Result<(), RunError> {
     let Ok(rvtext) = tgtgen::parse_koopa_program_to_riscv(&program) else {
         return Err(RunError::KoopaProgram2RiscvError);
     };
-    println!("\nRISC-V:\n\n{}", &rvtext);
+    println!("{}\nRISC-V:\n", "=====".repeat(20));
+    println!("{}", &rvtext);
 
     // write RISC-V text to file
     let Ok(_) = fs::write(output, rvtext) else {
