@@ -1,5 +1,6 @@
 use koopa::ir::entities::*;
 
+/// Context information used during assembly generation.
 pub struct ProgramContext<'a> {
     pub program: &'a Program,
     // Function has implemented the Copy trait!
