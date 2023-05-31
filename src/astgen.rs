@@ -30,7 +30,7 @@ mod tests {
     }
 
     #[test]
-    fn astgen_lv3_test() {
-        astgen_test("tests/sysy_scripts/lv3.c");
+    fn astgen_lv3_1_test() {
+        astgen_test("tests/sysy_scripts/lv3-1.c");
     }
 }

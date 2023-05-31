@@ -32,12 +32,13 @@ impl KoopaTextGenerate for FuncDef {
         scopes: &mut Scopes,
         tvm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        let ft = self.func_type.generate(lines, scopes, tvm)?;
+        let mut ft_pre = String::new();
+        let ft = self.func_type.generate(&mut ft_pre, scopes, tvm)?;
         let mut b = String::new();
         self.block.generate(&mut b, scopes, tvm)?;
 
         let new_text = format!("fun @{}(): {} {{\n{}\n}}", self.ident, ft, b,);
-        lines.push_str(&new_text);
+        append_line(lines, &new_text);
 
         Ok(String::new())
     }
@@ -105,66 +106,205 @@ impl KoopaTextGenerate for Exp {
 impl KoopaTextGenerate for LOrExp {
     fn generate(
         &self,
-        _lines: &mut String,
-        _scopes: &mut Scopes,
-        _tvm: &mut TempSymbolManager,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tvm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        Ok("".into())
+        match self {
+            Self::LAnd(exp) => {
+                let mut pre = String::new();
+                let var = exp.generate(&mut pre, scopes, tvm)?;
+                lines.push_str(&pre);
+                Ok(var)
+            },
+            Self::LOrLAnd(exp1, exp2) => {
+                let mut pre1 = String::new();
+                let mut pre2 = String::new();
+                let var1 = exp1.generate(&mut pre1, scopes, tvm)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tvm)?;
+                append_line(lines, &pre1);
+                append_line(lines, &pre2);
+                
+                let new_var = tvm.new_temp_symbol();
+                let new_line = format!("  {} = or {}, {}", new_var, var1, var2);
+                append_line(lines, &new_line);
+                Ok(new_var)
+            }
+        }
     }
 }
 
 impl KoopaTextGenerate for LAndExp {
     fn generate(
         &self,
-        _lines: &mut String,
-        _scopes: &mut Scopes,
-        _tvm: &mut TempSymbolManager,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tvm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        Ok("".into())
+        match self {
+            Self::Eq(exp) => {
+                let mut pre = String::new();
+                let var = exp.generate(&mut pre, scopes, tvm)?;
+                lines.push_str(&pre);
+                Ok(var)
+            },
+            Self::LAndEq(exp1, exp2) => {
+                let mut pre1 = String::new();
+                let mut pre2 = String::new();
+                let var1 = exp1.generate(&mut pre1, scopes, tvm)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tvm)?;
+                append_line(lines, &pre1);
+                append_line(lines, &pre2);
+                
+                let new_var = tvm.new_temp_symbol();
+                let new_line = format!("  {} = and {}, {}", new_var, var1, var2);
+                append_line(lines, &new_line);
+                Ok(new_var)
+            }
+        }
     }
 }
 
 impl KoopaTextGenerate for EqExp {
     fn generate(
         &self,
-        _lines: &mut String,
-        _scopes: &mut Scopes,
-        _tvm: &mut TempSymbolManager,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tvm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        Ok("".into())
+        match self {
+            Self::Rel(exp) => {
+                let mut pre = String::new();
+                let var = exp.generate(&mut pre, scopes, tvm)?;
+                lines.push_str(&pre);
+                Ok(var)
+            },
+            Self::EqRel(exp1, op, exp2) => {
+                let mut pre1 = String::new();
+                let mut pre2 = String::new();
+                let var1 = exp1.generate(&mut pre1, scopes, tvm)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tvm)?;
+                append_line(lines, &pre1);
+                append_line(lines, &pre2);
+                
+                let new_var = tvm.new_temp_symbol();
+                let op_str = match *op {
+                    EqExpOp::Eq => "eq",
+                    EqExpOp::Neq => "ne",
+                };
+                let new_line = format!("  {} = {} {}, {}", new_var, op_str, var1, var2);
+                append_line(lines, &new_line);
+                Ok(new_var)
+            }
+        }
     }
 }
 
 impl KoopaTextGenerate for RelExp {
     fn generate(
         &self,
-        _lines: &mut String,
-        _scopes: &mut Scopes,
-        _tvm: &mut TempSymbolManager,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tvm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        Ok("".into())
+        match self {
+            Self::Add(exp) => {
+                let mut pre = String::new();
+                let var = exp.generate(&mut pre, scopes, tvm)?;
+                lines.push_str(&pre);
+                Ok(var)
+            },
+            Self::RelAdd(exp1, op, exp2) => {
+                let mut pre1 = String::new();
+                let mut pre2 = String::new();
+                let var1 = exp1.generate(&mut pre1, scopes, tvm)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tvm)?;
+                append_line(lines, &pre1);
+                append_line(lines, &pre2);
+                
+                let new_var = tvm.new_temp_symbol();
+                let op_str = match *op {
+                    RelExpOp::Le => "le",
+                    RelExpOp::Ge => "ge",
+                    RelExpOp::Lt => "lt",
+                    RelExpOp::Gt => "gt",
+                };
+                let new_line = format!("  {} = {} {}, {}", new_var, op_str, var1, var2);
+                append_line(lines, &new_line);
+                Ok(new_var)
+            }
+        }
     }
 }
 
 impl KoopaTextGenerate for AddExp {
     fn generate(
         &self,
-        _lines: &mut String,
-        _scopes: &mut Scopes,
-        _tvm: &mut TempSymbolManager,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tvm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        Ok("".into())
+        match self {
+            Self::Mul(exp) => {
+                let mut pre = String::new();
+                let var = exp.generate(&mut pre, scopes, tvm)?;
+                lines.push_str(&pre);
+                Ok(var)
+            },
+            Self::AddMul(exp1, op, exp2) => {
+                let mut pre1 = String::new();
+                let mut pre2 = String::new();
+                let var1 = exp1.generate(&mut pre1, scopes, tvm)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tvm)?;
+                append_line(lines, &pre1);
+                append_line(lines, &pre2);
+                
+                let new_var = tvm.new_temp_symbol();
+                let op_str = match *op {
+                    AddExpOp::Add => "add",
+                    AddExpOp::Sub => "sub",
+                };
+                let new_line = format!("  {} = {} {}, {}", new_var, op_str, var1, var2);
+                append_line(lines, &new_line);
+                Ok(new_var)
+            }
+        }
     }
 }
 
 impl KoopaTextGenerate for MulExp {
     fn generate(
         &self,
-        _lines: &mut String,
-        _scopes: &mut Scopes,
-        _tvm: &mut TempSymbolManager,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tvm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        Ok("".into())
+        match self {
+            Self::Unary(exp) => {
+                let mut pre = String::new();
+                let var = exp.generate(&mut pre, scopes, tvm)?;
+                lines.push_str(&pre);
+                Ok(var)
+            },
+            Self::MulUnary(exp1, op, exp2) => {
+                let mut pre1 = String::new();
+                let mut pre2 = String::new();
+                let var1 = exp1.generate(&mut pre1, scopes, tvm)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tvm)?;
+                append_line(lines, &pre1);
+                append_line(lines, &pre2);
+                
+                let new_var = tvm.new_temp_symbol();
+                let op_str = match *op {
+                    MulExpOp::Mul => "mul",
+                    MulExpOp::Div => "div",
+                    MulExpOp::Mod => "mod",
+                };
+                let new_line = format!("  {} = {} {}, {}", new_var, op_str, var1, var2);
+                append_line(lines, &new_line);
+                Ok(new_var)
+            }
+        }
     }
 }
 
