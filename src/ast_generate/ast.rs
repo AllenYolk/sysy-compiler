@@ -84,7 +84,7 @@ pub enum PrimaryExp {
 
 #[derive(Debug)]
 pub enum EqExpOp {
-    Eq, 
+    Eq,
     Neq,
 }
 
@@ -93,20 +93,20 @@ pub enum RelExpOp {
     Le,
     Ge,
     Lt,
-    Gt
+    Gt,
 }
 
 #[derive(Debug)]
 pub enum AddExpOp {
-    Add, 
+    Add,
     Sub,
 }
 
 #[derive(Debug)]
 pub enum MulExpOp {
-    Mul, 
+    Mul,
     Div,
-    Mod
+    Mod,
 }
 
 #[derive(Debug)]

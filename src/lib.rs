@@ -1,5 +1,5 @@
 mod ast_generate;
-mod ir_generate;
+pub mod ir_generate;
 mod target_generate;
 mod tools;
 use std::fs;

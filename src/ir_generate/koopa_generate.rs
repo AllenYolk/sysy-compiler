@@ -116,7 +116,7 @@ impl KoopaTextGenerate for LOrExp {
                 let var = exp.generate(&mut pre, scopes, tsm)?;
                 lines.push_str(&pre);
                 Ok(var)
-            },
+            }
             Self::LOrLAnd(exp1, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
@@ -124,7 +124,7 @@ impl KoopaTextGenerate for LOrExp {
                 let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
-                
+
                 let new_var = tsm.new_temp_symbol();
                 let new_line = format!("  {} = or {}, {}", new_var, var1, var2);
                 append_line(lines, &new_line);
@@ -147,7 +147,7 @@ impl KoopaTextGenerate for LAndExp {
                 let var = exp.generate(&mut pre, scopes, tsm)?;
                 lines.push_str(&pre);
                 Ok(var)
-            },
+            }
             Self::LAndEq(exp1, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
@@ -155,7 +155,7 @@ impl KoopaTextGenerate for LAndExp {
                 let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
-                
+
                 let new_var = tsm.new_temp_symbol();
                 let new_line = format!("  {} = and {}, {}", new_var, var1, var2);
                 append_line(lines, &new_line);
@@ -178,7 +178,7 @@ impl KoopaTextGenerate for EqExp {
                 let var = exp.generate(&mut pre, scopes, tsm)?;
                 lines.push_str(&pre);
                 Ok(var)
-            },
+            }
             Self::EqRel(exp1, op, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
@@ -186,7 +186,7 @@ impl KoopaTextGenerate for EqExp {
                 let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
-                
+
                 let new_var = tsm.new_temp_symbol();
                 let op_str = match *op {
                     EqExpOp::Eq => "eq",
@@ -213,7 +213,7 @@ impl KoopaTextGenerate for RelExp {
                 let var = exp.generate(&mut pre, scopes, tsm)?;
                 lines.push_str(&pre);
                 Ok(var)
-            },
+            }
             Self::RelAdd(exp1, op, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
@@ -221,7 +221,7 @@ impl KoopaTextGenerate for RelExp {
                 let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
-                
+
                 let new_var = tsm.new_temp_symbol();
                 let op_str = match *op {
                     RelExpOp::Le => "le",
@@ -250,7 +250,7 @@ impl KoopaTextGenerate for AddExp {
                 let var = exp.generate(&mut pre, scopes, tsm)?;
                 lines.push_str(&pre);
                 Ok(var)
-            },
+            }
             Self::AddMul(exp1, op, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
@@ -258,7 +258,7 @@ impl KoopaTextGenerate for AddExp {
                 let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
-                
+
                 let new_var = tsm.new_temp_symbol();
                 let op_str = match *op {
                     AddExpOp::Add => "add",
@@ -285,7 +285,7 @@ impl KoopaTextGenerate for MulExp {
                 let var = exp.generate(&mut pre, scopes, tsm)?;
                 lines.push_str(&pre);
                 Ok(var)
-            },
+            }
             Self::MulUnary(exp1, op, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
@@ -293,7 +293,7 @@ impl KoopaTextGenerate for MulExp {
                 let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
-                
+
                 let new_var = tsm.new_temp_symbol();
                 let op_str = match *op {
                     MulExpOp::Mul => "mul",

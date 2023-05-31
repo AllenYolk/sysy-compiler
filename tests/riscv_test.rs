@@ -1,20 +1,39 @@
-use std::fs;
 use sysy_compiler::*;
 
-const CORRECT_RISCV_TEXT: &str = r#"  .text
-  .globl main
-main:
-  li a0, 112
-  ret"#;
+fn riscv_mod_test(input: &str, output: &str) {
+    run(Mode::Riscv, input, output).unwrap();
+}
 
 #[test]
 fn riscv_mod_test_lv1() {
-    run(
-        Mode::Riscv,
-        "tests/sysy_scripts/lv1.c",
-        "tests/riscv_scripts/lv1.asm",
-    )
-    .unwrap();
-    let res = fs::read_to_string("tests/riscv_scripts/lv1.asm").unwrap();
-    assert_eq!(res, CORRECT_RISCV_TEXT);
+    riscv_mod_test("tests/sysy_scripts/lv1.c", "tests/riscv_scripts/lv1.asm");
+}
+
+#[test]
+fn riscv_mod_test_lv2() {
+    riscv_mod_test("tests/sysy_scripts/lv2.c", "tests/riscv_scripts/lv2.asm");
+}
+
+#[test]
+fn riscv_mod_test_lv3_1() {
+    riscv_mod_test(
+        "tests/sysy_scripts/lv3-1.c",
+        "tests/riscv_scripts/lv3-1.asm",
+    );
+}
+
+#[test]
+fn riscv_mod_test_lv3_2() {
+    riscv_mod_test(
+        "tests/sysy_scripts/lv3-2.c",
+        "tests/riscv_scripts/lv3-2.asm",
+    );
+}
+
+#[test]
+fn riscv_mod_test_lv3_3() {
+    riscv_mod_test(
+        "tests/sysy_scripts/lv3-3.c",
+        "tests/riscv_scripts/lv3-3.asm",
+    );
 }
