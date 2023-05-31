@@ -1,4 +1,4 @@
-use crate::astgen::ast::*;
+use crate::ast_generate::ast::*;
 
 grammar;
 

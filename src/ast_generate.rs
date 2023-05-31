@@ -33,4 +33,14 @@ mod tests {
     fn astgen_lv3_1_test() {
         astgen_test("tests/sysy_scripts/lv3-1.c");
     }
+
+    #[test]
+    fn astgen_lv3_2_test() {
+        astgen_test("tests/sysy_scripts/lv3-2.c");
+    }
+
+    #[test]
+    fn astgen_lv3_3_test() {
+        astgen_test("tests/sysy_scripts/lv3-3.c");
+    }
 }

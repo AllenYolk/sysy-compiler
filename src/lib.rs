@@ -1,6 +1,6 @@
-mod astgen;
-mod irgen;
-mod tgtgen;
+mod ast_generate;
+mod ir_generate;
+mod target_generate;
 mod tools;
 use std::fs;
 
@@ -29,14 +29,14 @@ pub fn run(mode: Mode, input: &str, output: &str) -> Result<(), RunError> {
     };
 
     // parse the SysY file and generate the AST
-    let Ok(ast) = astgen::parse_sysy_to_ast(&input_content) else {
+    let Ok(ast) = ast_generate::parse_sysy_to_ast(&input_content) else {
         return Err(RunError::Sysy2AstError);
     };
     println!("{}\nAST:\n", "=====".repeat(20));
     println!("{:#?}", &ast);
 
     // scan the AST and get the Koopa text
-    let Ok(text) = irgen::parse_ast_to_koopa_text(&ast) else {
+    let Ok(text) = ir_generate::parse_ast_to_koopa_text(&ast) else {
         return Err(RunError::Ast2KoopaTextError);
     };
     println!("{}\nKoopa:\n", "=====".repeat(20));
@@ -51,12 +51,12 @@ pub fn run(mode: Mode, input: &str, output: &str) -> Result<(), RunError> {
     }
 
     // convert the Koopa text to Koopa program
-    let Ok(program) = irgen::get_koopa_program(&text) else {
+    let Ok(program) = ir_generate::get_koopa_program(&text) else {
         return Err(RunError::KoopaText2ProgramError);
     };
 
     // convert the Koopa program to RISC-V text
-    let Ok(rvtext) = tgtgen::parse_koopa_program_to_riscv(&program) else {
+    let Ok(rvtext) = target_generate::parse_koopa_program_to_riscv(&program) else {
         return Err(RunError::KoopaProgram2RiscvError);
     };
     println!("{}\nRISC-V:\n", "=====".repeat(20));

@@ -1,9 +1,9 @@
 mod context;
-mod rvgen;
+mod riscv_generate;
 
 use context::ProgramContext;
 use koopa::ir::*;
-use rvgen::RiscvGenerate;
+use riscv_generate::RiscvGenerate;
 
 /// Convert the Koopa program to RISC-V text.
 pub fn parse_koopa_program_to_riscv(program: &Program) -> Result<String, ()> {

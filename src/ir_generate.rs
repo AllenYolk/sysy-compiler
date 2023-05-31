@@ -1,13 +1,13 @@
-mod kpgen;
+mod koopa_generate;
 mod scopes;
-mod tempvar;
+mod temp_symbol;
 
-use crate::astgen::ast::*;
+use crate::ast_generate::ast::*;
 use koopa::front::Driver;
 use koopa::ir::*;
-use kpgen::KoopaTextGenerate;
+use koopa_generate::KoopaTextGenerate;
 use scopes::Scopes;
-use tempvar::TempSymbolManager;
+use temp_symbol::TempSymbolManager;
 
 /// Convert the AST to the Koopa text.
 pub fn parse_ast_to_koopa_text(ast: &CompUnit) -> Result<String, ()> {
