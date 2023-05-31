@@ -6,7 +6,7 @@ match {
     // ignore the spaces
     r"\s*" => {},
     // comment line prefixed by "//"
-    r"//[^\n\r]*[\n\r]" => {},
+    r"//[^\n\r]*[\n\r]*" => {},
     // comment block "/*...*/"
     r"/\*[^\*]*\*(\*|[^\*/][^\*]*\*)*/" => {},
     // others
@@ -27,11 +27,43 @@ Block: Block = "{" <stmt: Stmt> "}" => Block { stmt };
 
 Stmt: Stmt = "return" <exp: Exp> ";" => Stmt { exp };
 
-Exp: Exp = <exp: UnaryExp> => Exp { exp };
+// Variables - Expressions
+
+Exp: Exp = <exp: LOrExp> => Exp { exp };
+
+LOrExp: LOrExp = {
+    <land: LAndExp> => LOrExp::LAnd(land),
+    <lor: LOrExp> "||" <land: LAndExp> => LOrExp::LOrLAnd(Box::new(lor), land),
+}
+
+LAndExp: LAndExp = {
+    <eq: EqExp> => LAndExp::Eq(eq),
+    <land: LAndExp> "&&" <eq: EqExp> => LAndExp::LAndEq(Box::new(land), eq),
+}
+
+EqExp: EqExp = {
+    <rel: RelExp> => EqExp::Rel(rel),
+    <eq: EqExp> <op: EqExpOp> <rel: RelExp> => EqExp::EqRel(Box::new(eq), op, rel),
+}
+
+RelExp: RelExp = {
+    <add: AddExp> => RelExp::Add(add),
+    <rel: RelExp> <op: RelExpOp> <add: AddExp> => RelExp::RelAdd(Box::new(rel), op, add),
+}
+
+AddExp: AddExp = {
+    <mul: MulExp> => AddExp::Mul(mul),
+    <add: AddExp> <op: AddExpOp> <mul: MulExp> => AddExp::AddMul(Box::new(add), op, mul),
+}
+
+MulExp: MulExp = {
+    <unary: UnaryExp> => MulExp::Unary(unary),
+    <mul: MulExp> <op: MulExpOp> <unary: UnaryExp> => MulExp::MulUnary(Box::new(mul), op, unary),
+}
 
 UnaryExp: UnaryExp = {
     <primary: PrimaryExp> => UnaryExp::Primary(primary),
-    <uop: UnaryOp> <uexp: UnaryExp> => UnaryExp::Unary(uop, Box::new(uexp)),
+    <uop: UnaryExpOp> <uexp: UnaryExp> => UnaryExp::Unary(uop, Box::new(uexp)),
 }
 
 PrimaryExp: PrimaryExp = {
@@ -39,10 +71,35 @@ PrimaryExp: PrimaryExp = {
     <num: Number> => PrimaryExp::Num(num),
 }
 
-UnaryOp: UnaryOp = {
-    "+" => UnaryOp::Pos,
-    "-" => UnaryOp::Neg,
-    "!" => UnaryOp::Not,
+// Variables - Operators
+
+EqExpOp: EqExpOp = {
+    "==" => EqExpOp::Eq,
+    "!=" => EqExpOp::Neq,
+}
+
+RelExpOp: RelExpOp = {
+    "<=" => RelExpOp::Le,
+    ">=" => RelExpOp::Ge,
+    "<" => RelExpOp::Lt,
+    ">" => RelExpOp::Gt,
+}
+
+AddExpOp: AddExpOp = {
+    "+" => AddExpOp::Add,
+    "-" => AddExpOp::Sub,
+}
+
+MulExpOp: MulExpOp = {
+    "*" => MulExpOp::Mul,
+    "/" => MulExpOp::Div,
+    "%" => MulExpOp::Mod,
+}
+
+UnaryExpOp: UnaryExpOp = {
+    "+" => UnaryExpOp::Pos,
+    "-" => UnaryExpOp::Neg,
+    "!" => UnaryExpOp::Not,
 }
 
 Number: i32 = <num: IntConst> => num;

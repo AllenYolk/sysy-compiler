@@ -102,6 +102,72 @@ impl KoopaTextGenerate for Exp {
     }
 }
 
+impl KoopaTextGenerate for LOrExp {
+    fn generate(
+        &self,
+        _lines: &mut String,
+        _scopes: &mut Scopes,
+        _tvm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        Ok("".into())
+    }
+}
+
+impl KoopaTextGenerate for LAndExp {
+    fn generate(
+        &self,
+        _lines: &mut String,
+        _scopes: &mut Scopes,
+        _tvm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        Ok("".into())
+    }
+}
+
+impl KoopaTextGenerate for EqExp {
+    fn generate(
+        &self,
+        _lines: &mut String,
+        _scopes: &mut Scopes,
+        _tvm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        Ok("".into())
+    }
+}
+
+impl KoopaTextGenerate for RelExp {
+    fn generate(
+        &self,
+        _lines: &mut String,
+        _scopes: &mut Scopes,
+        _tvm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        Ok("".into())
+    }
+}
+
+impl KoopaTextGenerate for AddExp {
+    fn generate(
+        &self,
+        _lines: &mut String,
+        _scopes: &mut Scopes,
+        _tvm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        Ok("".into())
+    }
+}
+
+impl KoopaTextGenerate for MulExp {
+    fn generate(
+        &self,
+        _lines: &mut String,
+        _scopes: &mut Scopes,
+        _tvm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        Ok("".into())
+    }
+}
+
 impl KoopaTextGenerate for UnaryExp {
     fn generate(
         &self,
@@ -120,14 +186,14 @@ impl KoopaTextGenerate for UnaryExp {
                 let var = uexp.generate(&mut pre, scopes, tvm)?;
                 lines.push_str(&pre);
                 match *op {
-                    UnaryOp::Pos => Ok(var),
-                    UnaryOp::Neg => {
+                    UnaryExpOp::Pos => Ok(var),
+                    UnaryExpOp::Neg => {
                         let new_var = tvm.new_temp_symbol();
                         let new_line = format!("  {} = sub 0, {}", new_var, var);
                         append_line(lines, &new_line);
                         Ok(new_var)
                     }
-                    UnaryOp::Not => {
+                    UnaryExpOp::Not => {
                         let new_var = tvm.new_temp_symbol();
                         let new_line = format!("  {} = eq 0, {}", new_var, var);
                         append_line(lines, &new_line);

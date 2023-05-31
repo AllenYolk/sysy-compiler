@@ -25,15 +25,53 @@ pub struct Stmt {
     pub exp: Exp,
 }
 
+// Expressions
+
 #[derive(Debug)]
 pub struct Exp {
-    pub exp: UnaryExp,
+    pub exp: LOrExp,
+}
+
+#[derive(Debug)]
+pub enum LOrExp {
+    LAnd(LAndExp),
+    LOrLAnd(Box<LOrExp>, LAndExp),
+}
+
+#[derive(Debug)]
+pub enum LAndExp {
+    Eq(EqExp),
+    LAndEq(Box<LAndExp>, EqExp),
+}
+
+#[derive(Debug)]
+pub enum EqExp {
+    Rel(RelExp),
+    EqRel(Box<EqExp>, EqExpOp, RelExp),
+}
+
+#[derive(Debug)]
+pub enum RelExp {
+    Add(AddExp),
+    RelAdd(Box<RelExp>, RelExpOp, AddExp),
+}
+
+#[derive(Debug)]
+pub enum AddExp {
+    Mul(MulExp),
+    AddMul(Box<AddExp>, AddExpOp, MulExp),
+}
+
+#[derive(Debug)]
+pub enum MulExp {
+    Unary(UnaryExp),
+    MulUnary(Box<MulExp>, MulExpOp, UnaryExp),
 }
 
 #[derive(Debug)]
 pub enum UnaryExp {
     Primary(PrimaryExp),
-    Unary(UnaryOp, Box<UnaryExp>),
+    Unary(UnaryExpOp, Box<UnaryExp>),
 }
 
 #[derive(Debug)]
@@ -42,11 +80,42 @@ pub enum PrimaryExp {
     Num(Number),
 }
 
+// Operators
+
 #[derive(Debug)]
-pub enum UnaryOp {
+pub enum EqExpOp {
+    Eq, 
+    Neq,
+}
+
+#[derive(Debug)]
+pub enum RelExpOp {
+    Le,
+    Ge,
+    Lt,
+    Gt
+}
+
+#[derive(Debug)]
+pub enum AddExpOp {
+    Add, 
+    Sub,
+}
+
+#[derive(Debug)]
+pub enum MulExpOp {
+    Mul, 
+    Div,
+    Mod
+}
+
+#[derive(Debug)]
+pub enum UnaryExpOp {
     Pos,
     Neg,
     Not,
 }
+
+// Types
 
 type Number = i32;
