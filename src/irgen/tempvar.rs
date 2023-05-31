@@ -1,14 +1,13 @@
-pub struct TempVariableManager<'a> {
+pub struct TempSymbolManager {
     next: usize,
-    pub ret: Option<&'a str>,
 }
 
-impl<'a> TempVariableManager<'a> {
+impl TempSymbolManager {
     pub fn new() -> Self {
-        Self { next: 0, ret: None }
+        Self { next: 0 }
     }
 
-    pub fn new_temp_var(&mut self) -> String {
+    pub fn new_temp_symbol(&mut self) -> String {
         let cur = self.next;
         self.next += 1;
         format!("%{}", cur)

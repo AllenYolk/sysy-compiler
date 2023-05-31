@@ -1,6 +1,7 @@
 mod astgen;
 mod irgen;
 mod tgtgen;
+mod tools;
 use std::fs;
 
 #[derive(Debug)]

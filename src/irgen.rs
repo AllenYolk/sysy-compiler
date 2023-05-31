@@ -7,13 +7,13 @@ use koopa::front::Driver;
 use koopa::ir::*;
 use kpgen::KoopaTextGenerate;
 use scopes::Scopes;
-use tempvar::TempVariableManager;
+use tempvar::TempSymbolManager;
 
 /// Convert the AST to the Koopa text.
 pub fn parse_ast_to_koopa_text(ast: &CompUnit) -> Result<String, ()> {
-    let mut scopes = Scopes::new();
-    let mut tvm = TempVariableManager::new();
-    ast.generate(&mut scopes, &mut tvm)
+    let mut text = String::new();
+    ast.generate(&mut text, &mut Scopes::new(), &mut TempSymbolManager::new())?;
+    Ok(text)
 }
 
 /// Convert a Koopa text to Koopa program.

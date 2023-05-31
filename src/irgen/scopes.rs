@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 pub struct Scopes<'a> {
     functions: HashMap<&'a str, &'a str>, // identifier -> koopa symbol name
     values: Vec<HashMap<&'a str, &'a str>>, // identifier -> koopa symbol name
 }
 
+#[allow(dead_code)]
 impl<'a> Scopes<'a> {
     /// Construct a new `Scopes` record.
     pub fn new() -> Self {
