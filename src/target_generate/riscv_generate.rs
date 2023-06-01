@@ -1,25 +1,30 @@
 use super::context::*;
+use super::value_location::*;
+use crate::tools::*;
 use koopa::ir::entities::*;
 use koopa::ir::*;
 
 pub trait RiscvGenerate {
-    fn generate(&self, cxt: &mut ProgramContext) -> Result<String, ()>;
+    type Ret;
+
+    /// lines: always empty when entering the method
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()>;
 }
 
 impl RiscvGenerate for Program {
-    fn generate(&self, cxt: &mut ProgramContext) -> Result<String, ()> {
-        let mut target = String::new();
+    type Ret = ();
 
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         // global values
         let mut first_time = true;
         for &val in self.inst_layout() {
             let val_data = self.borrow_value(val);
             if let Some(val_name) = val_data.name() {
                 if first_time {
-                    target.push_str("  .data\n");
+                    append_line(lines, "  .data");
                     first_time = false;
                 }
-                target.push_str(&format!("  .globl {}\n", val_name));
+                append_line(lines, &format!("  .globl {}", val_name));
             }
         }
 
@@ -28,66 +33,154 @@ impl RiscvGenerate for Program {
         for &func in self.func_layout() {
             let func_name = &self.func(func).name()[1..];
             if first_time {
-                target.push_str("  .text\n");
+                append_line(lines, "  .text");
+                first_time = false;
             }
-            target.push_str(&format!("  .globl {}\n", func_name))
+            append_line(lines, &format!("  .globl {}", func_name));
         }
 
         // function definitions
         for &func in self.func_layout() {
             cxt.func = Some(func);
             let func_data = self.func(func);
-            target.push_str(&func_data.generate(cxt)?);
+            let mut new_lines = String::new();
+            func_data.generate(&mut new_lines, cxt)?;
+            append_line(lines, &new_lines);
         }
 
-        Ok(target)
+        Ok(())
     }
 }
 
 impl RiscvGenerate for FunctionData {
-    fn generate(&self, cxt: &mut ProgramContext) -> Result<String, ()> {
+    type Ret = ();
+
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let func_name = &self.name()[1..];
-        let mut target = format!("{}:\n", func_name);
+        append_line(lines, &format!("{}:", func_name));
 
         for (_bb, node) in self.layout().bbs() {
             for &inst_val in node.insts().keys() {
                 let inst_val_data = self.dfg().value(inst_val);
-                target.push_str(&inst_val_data.generate(cxt)?);
+                let mut new_lines = String::new();
+                let loc = inst_val_data.generate(&mut new_lines, cxt)?;
+                append_line(lines, &new_lines);
+                cxt.set_value_location(inst_val, loc);
             }
         }
 
-        Ok(target)
+        Ok(())
+    }
+}
+
+impl RiscvGenerate for Value {
+    type Ret = ValueLocation;
+
+    fn generate(&self, _lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        let Some(value_data) = cxt.get_value_data(*self) else {
+            return Err(());
+        };
+        match value_data.kind() {
+            ValueKind::Integer(val) => Ok(ValueLocation::Imm(format!("{}", val.value()))),
+            _ => {
+                if let Some(loc) = cxt.get_value_location(*self) {
+                    Ok(loc.clone())
+                } else {
+                    Err(())
+                }
+            }
+        }
     }
 }
 
 impl RiscvGenerate for ValueData {
-    fn generate(&self, cxt: &mut ProgramContext) -> Result<String, ()> {
+    type Ret = ValueLocation;
+
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         match self.kind() {
-            ValueKind::Return(val) => val.generate(cxt),
+            // integer constant
+            ValueKind::Integer(val) => val.generate(lines, cxt),
+            // binary operation
+            ValueKind::Binary(val) => val.generate(lines, cxt),
+            // function return
+            ValueKind::Return(val) => val.generate(lines, cxt),
+            // others
             _ => Err(()),
         }
     }
 }
 
-impl RiscvGenerate for values::Return {
-    fn generate(&self, cxt: &mut ProgramContext) -> Result<String, ()> {
-        let mut target = String::new();
+impl RiscvGenerate for values::Integer {
+    type Ret = ValueLocation;
 
-        if let Some(ret_val) = self.value() {
-            let Some(ret_val_data) = cxt.get_value_data(ret_val) else {
-                return Err(());
-            };
-            match ret_val_data.kind() {
-                ValueKind::Integer(v) => {
-                    target.push_str(&format!("  li a0, {}\n", v.value()));
-                }
-                _ => {
-                    return Err(());
-                }
+    fn generate(&self, _lines: &mut String, _cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        Err(())
+    }
+}
+
+impl RiscvGenerate for values::Binary {
+    type Ret = ValueLocation;
+
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        let loc_l = self.lhs().generate(&mut String::new(), cxt)?;
+        let loc_r = self.rhs().generate(&mut String::new(), cxt)?;
+
+        append_line(lines, &loc_l.move_to_reg("t0"));
+        append_line(lines, &loc_r.move_to_reg("t1"));
+        match self.op() {
+            BinaryOp::NotEq => {
+                append_line(lines, "  xor t0, t0, t1");
+                append_line(lines, "  snez t0, t0");
             }
-        }
-        target.push_str("  ret");
+            BinaryOp::Eq => {
+                append_line(lines, "  xor t0, t0, t1");
+                append_line(lines, "  seqz t0, t0");
+            }
+            BinaryOp::Ge => {
+                append_line(lines, "  slt t0, t0, t1");
+                append_line(lines, "  seqz t0, t0");
+            }
+            BinaryOp::Le => {
+                append_line(lines, "  sgt t0, t0, t1");
+                append_line(lines, "  seqz, t0, t0");
+            }
+            op @ _ => {
+                let verb = match op {
+                    BinaryOp::Gt => "sgt",
+                    BinaryOp::Lt => "slt",
+                    BinaryOp::Add => "add",
+                    BinaryOp::Sub => "sub",
+                    BinaryOp::Mul => "mul",
+                    BinaryOp::Div => "div",
+                    BinaryOp::Mod => "rem",
+                    BinaryOp::And => "and",
+                    BinaryOp::Or => "or",
+                    BinaryOp::Xor => "xor",
+                    BinaryOp::Shl => "sll",
+                    BinaryOp::Shr => "srl",
+                    BinaryOp::Sar => "sra",
+                    _ => return Err(()),
+                };
+                append_line(lines, &format!("  {} t0, t0, t1", verb));
+            }
+        };
+        let offset = cxt.alloc_local_stack_variable(4);
+        append_line(lines, &format!("  sw t0, {}(sp)", offset));
 
-        Ok(target)
+        Ok(ValueLocation::Stack(format!("{}(sp)", offset)))
+    }
+}
+
+impl RiscvGenerate for values::Return {
+    type Ret = ValueLocation;
+
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        if let Some(ret_val) = self.value() {
+            let loc = ret_val.generate(&mut String::new(), cxt)?;
+            append_line(lines, &loc.move_to_reg("a0"));
+        }
+        append_line(lines, "  ret");
+
+        Ok(ValueLocation::None)
     }
 }

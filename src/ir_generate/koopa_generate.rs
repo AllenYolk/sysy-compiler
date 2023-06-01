@@ -67,7 +67,7 @@ impl KoopaTextGenerate for Block {
     ) -> Result<String, ()> {
         let mut s = String::new();
         self.stmt.generate(&mut s, scopes, tsm)?;
-        lines.push_str(&format!("%entry:\n{}", s));
+        append_line(lines, &format!("%entry:\n{}", s));
 
         Ok(String::new())
     }
@@ -98,7 +98,7 @@ impl KoopaTextGenerate for Exp {
     ) -> Result<String, ()> {
         let mut pre = String::new();
         let var = self.exp.generate(&mut pre, scopes, tsm)?;
-        lines.push_str(&pre);
+        append_line(lines, &pre);
         Ok(var)
     }
 }
@@ -114,7 +114,7 @@ impl KoopaTextGenerate for LOrExp {
             Self::LAnd(exp) => {
                 let mut pre = String::new();
                 let var = exp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 Ok(var)
             }
             Self::LOrLAnd(exp1, exp2) => {
@@ -145,7 +145,7 @@ impl KoopaTextGenerate for LAndExp {
             Self::Eq(exp) => {
                 let mut pre = String::new();
                 let var = exp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 Ok(var)
             }
             Self::LAndEq(exp1, exp2) => {
@@ -176,7 +176,7 @@ impl KoopaTextGenerate for EqExp {
             Self::Rel(exp) => {
                 let mut pre = String::new();
                 let var = exp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 Ok(var)
             }
             Self::EqRel(exp1, op, exp2) => {
@@ -211,7 +211,7 @@ impl KoopaTextGenerate for RelExp {
             Self::Add(exp) => {
                 let mut pre = String::new();
                 let var = exp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 Ok(var)
             }
             Self::RelAdd(exp1, op, exp2) => {
@@ -248,7 +248,7 @@ impl KoopaTextGenerate for AddExp {
             Self::Mul(exp) => {
                 let mut pre = String::new();
                 let var = exp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 Ok(var)
             }
             Self::AddMul(exp1, op, exp2) => {
@@ -283,7 +283,7 @@ impl KoopaTextGenerate for MulExp {
             Self::Unary(exp) => {
                 let mut pre = String::new();
                 let var = exp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 Ok(var)
             }
             Self::MulUnary(exp1, op, exp2) => {
@@ -319,12 +319,12 @@ impl KoopaTextGenerate for UnaryExp {
         match self {
             Self::Primary(pexp) => {
                 let var = pexp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 Ok(var)
             }
             Self::Unary(op, uexp) => {
                 let var = uexp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 match *op {
                     UnaryExpOp::Pos => Ok(var),
                     UnaryExpOp::Neg => {
@@ -356,7 +356,7 @@ impl KoopaTextGenerate for PrimaryExp {
             Self::Exp(exp) => {
                 let mut pre = String::new();
                 let var = exp.generate(&mut pre, scopes, tsm)?;
-                lines.push_str(&pre);
+                append_line(lines, &pre);
                 Ok(var)
             }
             Self::Num(num) => Ok(format!("{}", num)),

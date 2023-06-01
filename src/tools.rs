@@ -1,5 +1,7 @@
+/// Append a string slice to a mutable reference of another string,
+/// starting from a new line.
 pub fn append_line(s: &mut String, l: &str) {
-    if !s.is_empty() {
+    if !s.is_empty() && !l.is_empty() {
         s.push('\n');
     }
     s.push_str(l);
