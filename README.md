@@ -6,3 +6,7 @@ A SysY compiler for PKU's Compiler Principle course, implemented in Rust.
 * AST -> Koopa Text (an intermediate representation)
 * Koopa Text -> Koopa Program: [koopa](https://crates.io/crates/koopa)
 * Koopa Program -> RISC-V
+
+## References
+
+* [Kira (Rust version)](https://github.com/pku-minic/kira-rs)
