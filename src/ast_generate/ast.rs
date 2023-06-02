@@ -17,7 +17,13 @@ pub enum FuncType {
 
 #[derive(Debug)]
 pub struct Block {
-    pub stmt: Stmt,
+    pub items: Vec<BlockItem>,
+}
+
+#[derive(Debug)]
+pub enum BlockItem {
+    Stmt(Stmt),
+    Decl(Decl),
 }
 
 #[derive(Debug)]
@@ -25,7 +31,42 @@ pub struct Stmt {
     pub exp: Exp,
 }
 
-// Expressions
+#[derive(Debug)]
+pub enum Decl {
+    Const(ConstDecl),
+    //Var(VarDecl),
+}
+
+#[derive(Debug)]
+pub struct ConstDecl {
+    pub const_type: BType,
+    pub defs: Vec<ConstDef>,
+}
+
+#[derive(Debug)]
+pub enum BType {
+    Int,
+}
+
+#[derive(Debug)]
+pub struct ConstDef {
+    pub ident: String,
+    pub init: ConstInitVal,
+}
+
+#[derive(Debug)]
+pub enum ConstInitVal {
+    Exp(ConstExp),
+}
+
+////////////////////////////////////////////////////////////////////////////
+// Expressions                                                            //
+////////////////////////////////////////////////////////////////////////////
+
+#[derive(Debug)]
+pub struct ConstExp {
+    pub exp: Exp,
+}
 
 #[derive(Debug)]
 pub struct Exp {
@@ -77,10 +118,18 @@ pub enum UnaryExp {
 #[derive(Debug)]
 pub enum PrimaryExp {
     Exp(Box<Exp>),
+    LVal(LVal),
     Num(Number),
 }
 
-// Operators
+#[derive(Debug)]
+pub struct LVal {
+    pub ident: String,
+}
+
+////////////////////////////////////////////////////////////////////////////
+// Operators                                                             //
+///////////////////////////////////////////////////////////////////////////
 
 #[derive(Debug)]
 pub enum EqExpOp {
@@ -116,6 +165,8 @@ pub enum UnaryExpOp {
     Not,
 }
 
-// Types
+////////////////////////////////////////////////////////////////////////////
+// Types                                                                 //
+///////////////////////////////////////////////////////////////////////////
 
 type Number = i32;

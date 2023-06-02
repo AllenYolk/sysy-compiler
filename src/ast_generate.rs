@@ -5,14 +5,14 @@ use lalrpop_util::lalrpop_mod;
 lalrpop_mod!(sysy);
 
 /// Convert the input SysY source code to AST.
-/// 
+///
 /// `lalrpop` crate is used to generate the parser.
 /// If an error occurs, `Err(())` is returned.
 /// Otherwise, return the root of the AST (i.e. `CompUnit`) wrapped by `Ok`.
-/// 
+///
 /// # Errors
 /// An error may occur when the input SysY source code is not valid.
-/// 
+///
 /// # Examples
 /// ```
 /// use sysy_compiler::ast_generate::parse_sysy_to_ast;
@@ -60,5 +60,10 @@ mod tests {
     #[test]
     fn astgen_lv3_3_test() {
         astgen_test("tests/sysy_scripts/lv3-3.c");
+    }
+
+    #[test]
+    fn astgen_lv4_1_test() {
+        astgen_test("tests/sysy_scripts/lv4-1.c");
     }
 }

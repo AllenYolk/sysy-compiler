@@ -13,7 +13,9 @@ match {
     _
 }
 
-// Variables
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Non-terminals                                                                                //
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 pub CompUnit: CompUnit = <func_def: FuncDef> => CompUnit { func_def };
 
@@ -23,11 +25,40 @@ FuncDef: FuncDef = {
 
 FuncType: FuncType = <ft: "int"> => FuncType::Int;
 
-Block: Block = "{" <stmt: Stmt> "}" => Block { stmt };
+// use the `*` macro of `lalrpop`
+Block: Block = "{" <items: (<BlockItem>)*> "}" => Block { items };
+
+BlockItem: BlockItem = {
+    <stmt: Stmt> => BlockItem::Stmt(stmt),
+    <decl: Decl> => BlockItem::Decl(decl),
+}
 
 Stmt: Stmt = "return" <exp: Exp> ";" => Stmt { exp };
 
-// Variables - Expressions
+Decl: Decl = {
+    <c: ConstDecl> => Decl::Const(c),
+}
+
+ConstDecl: ConstDecl = {
+    "const" <const_type: BType> <mut defs: (<ConstDef> ",")*> <def: ConstDef> ";" => {
+        defs.push(def);
+        ConstDecl { const_type, defs }
+    }
+}
+
+BType: BType = <bt: "int"> => BType::Int;
+
+ConstDef: ConstDef = {
+    <ident: Ident> "=" <init: ConstInitVal> => ConstDef { ident, init },
+}
+
+ConstInitVal: ConstInitVal = {
+    <exp: ConstExp> => ConstInitVal::Exp(exp),
+}
+
+// Expressions
+
+ConstExp: ConstExp = <exp: Exp> => ConstExp { exp };
 
 Exp: Exp = <exp: LOrExp> => Exp { exp };
 
@@ -68,10 +99,13 @@ UnaryExp: UnaryExp = {
 
 PrimaryExp: PrimaryExp = {
     "(" <exp: Exp> ")" => PrimaryExp::Exp(Box::new(exp)),
+    <lval: LVal> => PrimaryExp::LVal(lval),
     <num: Number> => PrimaryExp::Num(num),
 }
 
-// Variables - Operators
+LVal: LVal = <ident: Ident> => LVal{ ident };
+
+// Operators
 
 EqExpOp: EqExpOp = {
     "==" => EqExpOp::Eq,
@@ -104,7 +138,9 @@ UnaryExpOp: UnaryExpOp = {
 
 Number: i32 = <num: IntConst> => num;
 
-// Terminals
+//////////////////////////////////////////////////////////////////////////////////////////////////
+// Terminals                                                                                    //
+//////////////////////////////////////////////////////////////////////////////////////////////////
 
 Ident: String = {
     r"[_a-zA-Z][_a-zA-Z0-9]*" => String::from(<>),

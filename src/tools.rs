@@ -1,6 +1,6 @@
 /// Append a string slice to a mutable reference of another string,
 /// starting from a new line.
-/// 
+///
 /// If neither of the strings is empty, a new line "\n" is inserted between them.
 /// Otherwise, the two strings are concatenated simply.
 /// This function is private and is used only in this crate.

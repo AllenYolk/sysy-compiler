@@ -10,7 +10,7 @@ impl TempSymbolManager {
     }
 
     /// Get a new temporary symbol.
-    /// 
+    ///
     /// The temporary symbol is in the form of `%{integer}`.
     pub fn new_temp_symbol(&mut self) -> String {
         let cur = self.next;

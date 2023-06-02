@@ -34,9 +34,8 @@ pub enum RunError {
     NotImplementedError,
 }
 
-
 /// Run the compiler in the given mode.
-/// 
+///
 /// The first argument is the running mode of the compiler.
 /// The second and third arguments are the input and output file paths, respectively.
 pub fn run(mode: Mode, input: &str, output: &str) -> Result<(), RunError> {

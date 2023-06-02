@@ -10,7 +10,7 @@ pub trait RiscvGenerate {
     type Ret;
 
     /// Generate RISC-V code.
-    /// 
+    ///
     /// `lines` should always be empty when entering the method.
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()>;
 }

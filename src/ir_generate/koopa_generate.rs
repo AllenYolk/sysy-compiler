@@ -6,7 +6,7 @@ use crate::tools::*;
 /// Run DFS on the AST and generate the Koopa text.
 pub trait KoopaTextGenerate {
     /// Generate the Koopa text recursively.
-    /// 
+    ///
     /// `lines` should always be empty when entering the method.
     fn generate(
         &self,
@@ -68,11 +68,28 @@ impl KoopaTextGenerate for Block {
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        let mut s = String::new();
-        self.stmt.generate(&mut s, scopes, tsm)?;
-        append_line(lines, &format!("%entry:\n{}", s));
+        append_line(lines, "%entry:");
+        for item in self.items.iter() {
+            let mut s = String::new();
+            item.generate(&mut s, scopes, tsm)?;
+            append_line(lines, &s);
+        }
 
         Ok(String::new())
+    }
+}
+
+impl KoopaTextGenerate for BlockItem {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        match self {
+            Self::Stmt(stmt) => stmt.generate(lines, scopes, tsm),
+            Self::Decl(decl) => decl.generate(lines, scopes, tsm),
+        }
     }
 }
 
@@ -89,6 +106,77 @@ impl KoopaTextGenerate for Stmt {
         append_line(lines, &pre);
 
         Ok(String::new())
+    }
+}
+
+impl KoopaTextGenerate for Decl {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        match self {
+            Self::Const(const_decl) => const_decl.generate(lines, scopes, tsm),
+            // Self::Var(var_decl) => var_decl.generate(),
+        }
+    }
+}
+
+impl KoopaTextGenerate for ConstDecl {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        for def in self.defs.iter() {
+            let mut pre = String::new();
+            def.generate(&mut pre, scopes, tsm)?;
+            append_line(lines, &pre);
+        }
+
+        Ok(String::new())
+    }
+}
+
+impl KoopaTextGenerate for ConstDef {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        let mut pre = String::new();
+        let init = self.init.generate(&mut pre, scopes, tsm)?;
+        append_line(&mut pre, &format!("  {} = {}", self.ident, init));
+        append_line(lines, &pre);
+
+        Ok(String::new())
+    }
+}
+
+impl KoopaTextGenerate for ConstInitVal {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        match self {
+            Self::Exp(exp) => exp.generate(lines, scopes, tsm),
+        }
+    }
+}
+
+impl KoopaTextGenerate for ConstExp {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        self.exp.generate(lines, scopes, tsm)
     }
 }
 
@@ -363,6 +451,20 @@ impl KoopaTextGenerate for PrimaryExp {
                 Ok(var)
             }
             Self::Num(num) => Ok(format!("{}", num)),
+            Self::LVal(_lval) => {
+                Ok(String::new())
+            }
         }
+    }
+}
+
+impl KoopaTextGenerate for LVal {
+    fn generate(
+        &self,
+        _lines: &mut String,
+        _scopes: &mut Scopes,
+        _tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        Ok(String::new())
     }
 }

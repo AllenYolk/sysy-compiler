@@ -37,3 +37,11 @@ fn riscv_mod_test_lv3_3() {
         "tests/riscv_scripts/lv3-3.asm",
     );
 }
+
+#[test]
+fn riscv_mod_test_lv4_1() {
+    riscv_mod_test(
+        "tests/sysy_scripts/lv4-1.c",
+        "tests/riscv_scripts/lv4-1.asm",
+    );
+}

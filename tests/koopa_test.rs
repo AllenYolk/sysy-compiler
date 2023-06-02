@@ -40,3 +40,11 @@ fn koopa_mod_test_lv3_3() {
         "tests/koopa_scripts/lv3-3.koopa",
     );
 }
+
+#[test]
+fn koopa_mod_test_lv4_1() {
+    koopa_mod_test(
+        "tests/sysy_scripts/lv4-1.c",
+        "tests/koopa_scripts/lv4-1.koopa",
+    );
+}

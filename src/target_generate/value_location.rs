@@ -1,5 +1,5 @@
 /// The location of a value.
-/// 
+///
 /// The `String` contained in the variants can be used directly in RISC-V instructions!
 #[derive(Clone)]
 #[allow(dead_code)]
