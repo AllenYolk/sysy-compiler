@@ -1,27 +1,44 @@
-mod ast_generate;
+pub mod ast_generate;
 pub mod ir_generate;
-mod target_generate;
+pub mod target_generate;
 mod tools;
 use std::fs;
 
+/// The running mode of the compiler.
 #[derive(Debug)]
 pub enum Mode {
+    /// Convert the SysY source code to Koopa code.
     Koopa,
+    /// Convert the SysY source code to RISC-V code.
     Riscv,
+    /// Convert the SysY source code to RISC-V code and try to optimize the performance.
     Perf,
 }
 
+/// The error type of the compiler.
 #[derive(Debug)]
 pub enum RunError {
+    /// The input file cannot be read.
     ReadFileError,
+    /// The output file (Koopa or RISC-V) cannot be written.
     WriteFileError,
+    /// The SysY source code cannot be parsed to AST.
     Sysy2AstError,
+    /// The AST cannot be parsed to Koopa text.
     Ast2KoopaTextError,
+    /// The Koopa text cannot be parsed to Koopa program.
     KoopaText2ProgramError,
+    /// The Koopa program cannot be parsed to RISC-V text.
     KoopaProgram2RiscvError,
+    /// The feature is not implemented.
     NotImplementedError,
 }
 
+
+/// Run the compiler in the given mode.
+/// 
+/// The first argument is the running mode of the compiler.
+/// The second and third arguments are the input and output file paths, respectively.
 pub fn run(mode: Mode, input: &str, output: &str) -> Result<(), RunError> {
     // read the SysY input source file
     let Ok(input_content) = fs::read_to_string(input) else {

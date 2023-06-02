@@ -3,8 +3,11 @@ use super::temp_symbol::TempSymbolManager;
 use crate::ast_generate::ast::*;
 use crate::tools::*;
 
+/// Run DFS on the AST and generate the Koopa text.
 pub trait KoopaTextGenerate {
-    /// lines: always empty when entering the method.
+    /// Generate the Koopa text recursively.
+    /// 
+    /// `lines` should always be empty when entering the method.
     fn generate(
         &self,
         lines: &mut String,

@@ -1,12 +1,17 @@
+/// Manage and generate Koopa temporary symbols.
 pub struct TempSymbolManager {
     next: usize,
 }
 
 impl TempSymbolManager {
+    /// Create a new `TempSymbolManager`.
     pub fn new() -> Self {
         Self { next: 0 }
     }
 
+    /// Get a new temporary symbol.
+    /// 
+    /// The temporary symbol is in the form of `%{integer}`.
     pub fn new_temp_symbol(&mut self) -> String {
         let cur = self.next;
         self.next += 1;

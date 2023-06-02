@@ -1,14 +1,20 @@
-/// A struct describing where a value is located.
+/// The location of a value.
+/// 
+/// The `String` contained in the variants can be used directly in RISC-V instructions!
 #[derive(Clone)]
 #[allow(dead_code)]
 pub enum ValueLocation {
+    /// An Immediate value.
     Imm(String),
+    /// Located in a register.
     Reg(String),
+    /// Located on the stack frame.
     Stack(String),
     None,
 }
 
 impl ValueLocation {
+    /// Generate the instruction (a `String`) that moves the value (with the location) to the given register.
     pub fn move_to_reg(&self, reg: &str) -> String {
         match self {
             Self::Imm(val) => {

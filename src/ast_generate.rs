@@ -4,7 +4,25 @@ use lalrpop_util::lalrpop_mod;
 
 lalrpop_mod!(sysy);
 
-/// Convert the input SysY source code to the AST.
+/// Convert the input SysY source code to AST.
+/// 
+/// `lalrpop` crate is used to generate the parser.
+/// If an error occurs, `Err(())` is returned.
+/// Otherwise, return the root of the AST (i.e. `CompUnit`) wrapped by `Ok`.
+/// 
+/// # Errors
+/// An error may occur when the input SysY source code is not valid.
+/// 
+/// # Examples
+/// ```
+/// use sysy_compiler::ast_generate::parse_sysy_to_ast;
+/// let input = r#"
+/// int main() {
+///    return 0;
+/// }
+/// "#;
+/// let ast = parse_sysy_to_ast(input).unwrap();
+/// ```
 pub fn parse_sysy_to_ast(input: &str) -> Result<CompUnit, ()> {
     sysy::CompUnitParser::new().parse(input).map_err(|_| ())
 }

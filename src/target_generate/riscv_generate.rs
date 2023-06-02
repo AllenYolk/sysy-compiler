@@ -4,10 +4,14 @@ use crate::tools::*;
 use koopa::ir::entities::*;
 use koopa::ir::*;
 
+/// Generate RISC-V code from the given Koopa object.
 pub trait RiscvGenerate {
+    /// The return type of the method `generate`.
     type Ret;
 
-    /// lines: always empty when entering the method
+    /// Generate RISC-V code.
+    /// 
+    /// `lines` should always be empty when entering the method.
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()>;
 }
 
