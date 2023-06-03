@@ -1,9 +1,31 @@
 use std::collections::HashMap;
 
+#[derive(Clone)]
+pub enum SymbolTableValue {
+    Const(String),
+    Var(String),
+}
+
+impl SymbolTableValue {
+    pub fn is_const(&self) -> bool {
+        match self {
+            SymbolTableValue::Const(_) => true,
+            SymbolTableValue::Var(_) => false,
+        }
+    }
+
+    pub fn get_value(&self) -> String {
+        match self {
+            SymbolTableValue::Const(s) => s.clone(),
+            SymbolTableValue::Var(s) => s.clone(),
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub struct Scopes {
     functions: HashMap<String, String>, // identifier -> koopa symbol name
-    values: Vec<HashMap<String, String>>, // identifier -> koopa symbol name
+    values: Vec<HashMap<String, SymbolTableValue>>, // identifier -> koopa symbol name
 }
 
 #[allow(dead_code)]
@@ -26,7 +48,7 @@ impl Scopes {
         self.values.pop();
     }
 
-    pub fn get_value(&self, identifier: &str) -> Result<String, ()> {
+    pub fn get_value(&self, identifier: &str) -> Result<SymbolTableValue, ()> {
         let l = self.values.len();
         for i_ in 1..=l {
             let i = l - i_;
@@ -37,12 +59,17 @@ impl Scopes {
         Err(())
     }
 
-    pub fn add_value(&mut self, identifier: &str, symbol: &str) -> Result<(), ()> {
+    pub fn add_value(&mut self, identifier: &str, symbol: &str, is_const: bool) -> Result<(), ()> {
         let Some(symtab) = self.values.last_mut() else {
             return Err(());
         };
-        if let Some(_) = symtab.insert(identifier.into(), symbol.into()) {
-            return Err(());
+        let v = if is_const {
+            SymbolTableValue::Const(symbol.into())
+        } else {
+            SymbolTableValue::Var(symbol.into())
+        };
+        if let Some(_) = symtab.insert(identifier.into(), v) {
+            return Err(()); // defined multiple times
         };
         Ok(())
     }

@@ -1,0 +1,17 @@
+fun @main(): i32 {
+%entry:
+  @x = alloc i32
+  %0 = mul 10, 4
+  store %0, @x
+  @z = alloc i32
+  %1 = sub 4, 1
+  store %1, @z
+  %2 = load @x
+  %3 = add %2, 1
+  %4 = load @z
+  %5 = mod %3, %4
+  store %5, @x
+  %6 = load @x
+  %7 = mod %6, 4
+  ret %7
+}

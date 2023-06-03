@@ -1,5 +1,5 @@
 use super::exp_solve::ExpSolve;
-use super::scopes::Scopes;
+use super::scopes::*;
 use super::temp_symbol::TempSymbolManager;
 use crate::ast_generate::ast::*;
 use crate::tools::*;
@@ -109,7 +109,17 @@ impl KoopaTextGenerate for Stmt {
                 append_line(lines, &pre);
             },
             Self::Assign(lval, exp) => {
+                let id = lval.generate(&mut String::new(), scopes, tsm)?;
+                let SymbolTableValue::Var(left) = scopes.get_value(&id)? else {
+                    return Err(()); // try to assign a constant
+                };
 
+                let mut pre = String::new();
+                let right = exp.generate(&mut pre, scopes, tsm)?;
+                append_line(lines, &pre);
+                
+                let new_line = format!("  store {}, {}", right, left);
+                append_line(lines, &new_line);
             },
         }
         
@@ -127,7 +137,7 @@ impl KoopaTextGenerate for Decl {
     ) -> Result<String, ()> {
         match self {
             Self::Const(const_decl) => const_decl.generate(lines, scopes, tsm),
-            Self::Var(var_decl) => Err(())// var_decl.generate(),
+            Self::Var(var_decl) => var_decl.generate(lines, scopes, tsm),
         }
     }
 }
@@ -163,7 +173,7 @@ impl KoopaTextGenerate for ConstDef {
         let mut pre = String::new();
         let init = self.init.generate(&mut pre, scopes, tsm)?;
         append_line(lines, &pre); // `pre` is empty.
-        scopes.add_value(&self.ident, &init)?;
+        scopes.add_value(&self.ident, &init, true)?;
 
         Ok(String::new())
     }
@@ -178,6 +188,57 @@ impl KoopaTextGenerate for ConstInitVal {
     ) -> Result<String, ()> {
         match self {
             Self::Exp(exp) => exp.generate(lines, scopes, tsm),
+        }
+    }
+}
+
+impl KoopaTextGenerate for VarDecl {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        for def in self.defs.iter() {
+            let mut pre = String::new();
+            def.generate(&mut pre, scopes, tsm)?;
+            append_line(lines, &pre);
+        }
+
+        Ok(String::new())
+    }
+}
+
+impl KoopaTextGenerate for VarDef {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        append_line(lines, &format!("  @{} = alloc i32", self.ident));
+        scopes.add_value(&self.ident, &format!("@{}", self.ident), false)?;
+
+        if let Some(ref init) = self.init { // has initial value
+            let mut pre = String::new();
+            let init_handle = init.generate(&mut pre, scopes, tsm)?;
+            append_line(lines, &pre);
+            append_line(lines, &format!("  store {}, @{}", init_handle, self.ident));
+        }
+
+        Ok(String::new())
+    }
+}
+
+impl KoopaTextGenerate for InitVal {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+    ) -> Result<String, ()> {
+        match self {
+            Self::Exp(exp) => exp.generate(lines, scopes, tsm)
         }
     }
 }
@@ -469,9 +530,18 @@ impl KoopaTextGenerate for PrimaryExp {
                 let mut pre = String::new();
                 let id = lval.generate(&mut pre, scopes, tsm)?;
                 append_line(lines, &pre);
-                let val = scopes.get_value(&id)?;
-                println!("yeah, {}", val);
-                Ok(val)
+                match scopes.get_value(&id)? {
+                    SymbolTableValue::Const(s) => {
+                        // `s` is a literal value, so we can just return it.
+                        Ok(s)
+                    },
+                    SymbolTableValue::Var(s) => {
+                        // `s` is a symbol name pointing to an address, so we need to load the value.
+                        let new_temp_symbol = tsm.new_temp_symbol();
+                        append_line(lines, &format!("  {} = load {}", new_temp_symbol, s));
+                        Ok(new_temp_symbol)
+                    },
+                }
             }
         }
     }
@@ -484,6 +554,6 @@ impl KoopaTextGenerate for LVal {
         _scopes: &mut Scopes,
         _tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        Ok(self.ident.clone())
+        Ok(self.ident.clone()) // return the identifier
     }
 }

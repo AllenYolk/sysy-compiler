@@ -1,4 +1,4 @@
-use super::scopes::Scopes;
+use super::scopes::*;
 use crate::ast_generate::ast::*;
 
 /// Solve the value of an expression.
@@ -142,7 +142,9 @@ impl ExpSolve for PrimaryExp {
 
 impl ExpSolve for LVal {
     fn solve(&self, scopes: &Scopes) -> Result<i32, ()> {
-        let v = scopes.get_value(&self.ident)?;
+        let SymbolTableValue::Const(v) = scopes.get_value(&self.ident)? else {
+            return Err(());
+        };
         i32::from_str_radix(&v, 10).map_err(|_| ())
     }
 }
