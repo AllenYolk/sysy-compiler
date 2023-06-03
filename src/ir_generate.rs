@@ -1,3 +1,4 @@
+mod exp_solve;
 mod koopa_generate;
 mod scopes;
 mod temp_symbol;

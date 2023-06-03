@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
 #[allow(dead_code)]
-pub struct Scopes<'a> {
-    functions: HashMap<&'a str, &'a str>, // identifier -> koopa symbol name
-    values: Vec<HashMap<&'a str, &'a str>>, // identifier -> koopa symbol name
+pub struct Scopes {
+    functions: HashMap<String, String>, // identifier -> koopa symbol name
+    values: Vec<HashMap<String, String>>, // identifier -> koopa symbol name
 }
 
 #[allow(dead_code)]
-impl<'a> Scopes<'a> {
+impl Scopes {
     /// Construct a new `Scopes` record.
     pub fn new() -> Self {
         Self {
@@ -26,36 +26,36 @@ impl<'a> Scopes<'a> {
         self.values.pop();
     }
 
-    pub fn get_value(&self, identifier: &str) -> Result<&str, ()> {
+    pub fn get_value(&self, identifier: &str) -> Result<String, ()> {
         let l = self.values.len();
         for i_ in 1..=l {
             let i = l - i_;
-            if let Some(&res) = self.values[i].get(identifier) {
-                return Ok(res);
+            if let Some(res) = self.values[i].get(identifier) {
+                return Ok(res.clone());
             }
         }
         Err(())
     }
 
-    pub fn add_value(&mut self, identifier: &'a str, symbol: &'a str) -> Result<(), ()> {
+    pub fn add_value(&mut self, identifier: &str, symbol: &str) -> Result<(), ()> {
         let Some(symtab) = self.values.last_mut() else {
             return Err(());
         };
-        if let Some(_) = symtab.insert(identifier, symbol) {
+        if let Some(_) = symtab.insert(identifier.into(), symbol.into()) {
             return Err(());
         };
         Ok(())
     }
 
-    pub fn get_function(&self, identifier: &str) -> Result<&str, ()> {
-        let Some(&res) = self.functions.get(identifier) else {
+    pub fn get_function(&self, identifier: &str) -> Result<String, ()> {
+        let Some(res) = self.functions.get(identifier) else {
             return Err(());
         };
-        Ok(res)
+        Ok(res.clone())
     }
 
-    pub fn add_function(&mut self, identifier: &'a str, symbol: &'a str) -> Result<(), ()> {
-        if let Some(_) = self.functions.insert(identifier, symbol) {
+    pub fn add_function(&mut self, identifier: &str, symbol: &str) -> Result<(), ()> {
+        if let Some(_) = self.functions.insert(identifier.into(), symbol.into()) {
             return Err(());
         };
         Ok(())

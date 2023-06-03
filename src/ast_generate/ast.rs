@@ -38,7 +38,8 @@ pub enum Decl {
 }
 
 #[derive(Debug)]
-pub struct ConstDecl { // there's only `int` type in SysY!
+pub struct ConstDecl {
+    // there's only `int` type in SysY!
     pub defs: Vec<ConstDef>,
 }
 

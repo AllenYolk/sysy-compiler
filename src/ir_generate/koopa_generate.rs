@@ -1,3 +1,4 @@
+use super::exp_solve::ExpSolve;
 use super::scopes::Scopes;
 use super::temp_symbol::TempSymbolManager;
 use crate::ast_generate::ast::*;
@@ -147,10 +148,14 @@ impl KoopaTextGenerate for ConstDef {
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
+        // In SysY, constants are always evaluated at compile time.
+        // In the corresponding Koopa code, constants are replaced by their values.
+        // So we can just evaluate the constant value and then add the constant to the symbol table.
+        // There's no need to generate any Koopa code!
         let mut pre = String::new();
         let init = self.init.generate(&mut pre, scopes, tsm)?;
-        append_line(&mut pre, &format!("  {} = {}", self.ident, init));
-        append_line(lines, &pre);
+        append_line(lines, &pre); // `pre` is empty.
+        scopes.add_value(&self.ident, &init)?;
 
         Ok(String::new())
     }
@@ -172,11 +177,12 @@ impl KoopaTextGenerate for ConstInitVal {
 impl KoopaTextGenerate for ConstExp {
     fn generate(
         &self,
-        lines: &mut String,
+        _lines: &mut String,
         scopes: &mut Scopes,
-        tsm: &mut TempSymbolManager,
+        _tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        self.exp.generate(lines, scopes, tsm)
+        let v = self.solve(scopes)?; // evaluate the constant expression while generating AST.
+        Ok(v.to_string()) // return the constant value (as a `String`).
     }
 }
 
@@ -451,8 +457,13 @@ impl KoopaTextGenerate for PrimaryExp {
                 Ok(var)
             }
             Self::Num(num) => Ok(format!("{}", num)),
-            Self::LVal(_lval) => {
-                Ok(String::new())
+            Self::LVal(lval) => {
+                let mut pre = String::new();
+                let id = lval.generate(&mut pre, scopes, tsm)?;
+                append_line(lines, &pre);
+                let val = scopes.get_value(&id)?;
+                println!("yeah, {}", val);
+                Ok(val)
             }
         }
     }
@@ -465,6 +476,6 @@ impl KoopaTextGenerate for LVal {
         _scopes: &mut Scopes,
         _tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        Ok(String::new())
+        Ok(self.ident.clone())
     }
 }
