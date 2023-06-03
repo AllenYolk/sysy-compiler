@@ -27,14 +27,15 @@ pub enum BlockItem {
 }
 
 #[derive(Debug)]
-pub struct Stmt {
-    pub exp: Exp,
+pub enum Stmt {
+    Assign(LVal, Exp),
+    Return(Exp),
 }
 
 #[derive(Debug)]
 pub enum Decl {
     Const(ConstDecl),
-    //Var(VarDecl),
+    Var(VarDecl),
 }
 
 #[derive(Debug)]
@@ -52,6 +53,23 @@ pub struct ConstDef {
 #[derive(Debug)]
 pub enum ConstInitVal {
     Exp(ConstExp),
+}
+
+#[derive(Debug)]
+pub struct VarDecl {
+    // there's only `int` type in SysY!
+    pub defs: Vec<VarDef>,
+}
+
+#[derive(Debug)]
+pub struct VarDef {
+    pub ident: String,
+    pub init: Option<InitVal>,
+}
+
+#[derive(Debug)]
+pub enum InitVal {
+    Exp(Exp),
 }
 
 ////////////////////////////////////////////////////////////////////////////

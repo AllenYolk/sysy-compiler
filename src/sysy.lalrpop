@@ -33,10 +33,14 @@ BlockItem: BlockItem = {
     <decl: Decl> => BlockItem::Decl(decl),
 }
 
-Stmt: Stmt = "return" <exp: Exp> ";" => Stmt { exp };
+Stmt: Stmt = {
+    "return" <exp: Exp> ";" => Stmt::Return(exp),
+    <lval: LVal> "=" <exp: Exp> ";" => Stmt::Assign(lval, exp),
+}
 
 Decl: Decl = {
     <c: ConstDecl> => Decl::Const(c),
+    <v: VarDecl> => Decl::Var(v),
 }
 
 ConstDecl: ConstDecl = {
@@ -52,6 +56,21 @@ ConstDef: ConstDef = {
 
 ConstInitVal: ConstInitVal = {
     <exp: ConstExp> => ConstInitVal::Exp(exp),
+}
+
+VarDecl: VarDecl = {
+    "int" <mut defs: (<VarDef> ",")*> <def: VarDef> ";" => {
+        defs.push(def);
+        VarDecl { defs }
+    }
+}
+
+VarDef: VarDef = {
+    <ident: Ident> <init: ("=" <InitVal>)?> => VarDef { ident, init },
+}
+
+InitVal: InitVal = {
+    <exp: Exp> => InitVal::Exp(exp),
 }
 
 // Expressions

@@ -66,4 +66,9 @@ mod tests {
     fn astgen_lv4_1_test() {
         astgen_test("tests/sysy_scripts/lv4-1.c");
     }
+
+    #[test]
+    fn astgen_lv4_2_test() {
+        astgen_test("tests/sysy_scripts/lv4-2.c");
+    }
 }

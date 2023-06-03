@@ -101,10 +101,18 @@ impl KoopaTextGenerate for Stmt {
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
-        let mut pre = String::new();
-        let ret = self.exp.generate(&mut pre, scopes, tsm)?;
-        append_line(&mut pre, &format!("  ret {}", ret));
-        append_line(lines, &pre);
+        match self {
+            Self::Return(exp) => {
+                let mut pre = String::new();
+                let ret = exp.generate(&mut pre, scopes, tsm)?;
+                append_line(&mut pre, &format!("  ret {}", ret));
+                append_line(lines, &pre);
+            },
+            Self::Assign(lval, exp) => {
+
+            },
+        }
+        
 
         Ok(String::new())
     }
@@ -119,7 +127,7 @@ impl KoopaTextGenerate for Decl {
     ) -> Result<String, ()> {
         match self {
             Self::Const(const_decl) => const_decl.generate(lines, scopes, tsm),
-            // Self::Var(var_decl) => var_decl.generate(),
+            Self::Var(var_decl) => Err(())// var_decl.generate(),
         }
     }
 }
