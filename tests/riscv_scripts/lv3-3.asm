@@ -1,6 +1,7 @@
   .text
   .globl main
 main:
+  addi sp, sp, -12
   li t0, 1
   li t1, 2
   sgt t0, t0, t1
@@ -16,4 +17,5 @@ main:
   sub t0, t0, t1
   sw t0, 8(sp)
   lw a0, 8(sp)
+  addi sp, sp, 12
   ret

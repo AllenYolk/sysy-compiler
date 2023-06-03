@@ -6,22 +6,6 @@ pub enum SymbolTableValue {
     Var(String),
 }
 
-impl SymbolTableValue {
-    pub fn is_const(&self) -> bool {
-        match self {
-            SymbolTableValue::Const(_) => true,
-            SymbolTableValue::Var(_) => false,
-        }
-    }
-
-    pub fn get_value(&self) -> String {
-        match self {
-            SymbolTableValue::Const(s) => s.clone(),
-            SymbolTableValue::Var(s) => s.clone(),
-        }
-    }
-}
-
 #[allow(dead_code)]
 pub struct Scopes {
     functions: HashMap<String, String>, // identifier -> koopa symbol name

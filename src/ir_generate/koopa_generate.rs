@@ -107,7 +107,7 @@ impl KoopaTextGenerate for Stmt {
                 let ret = exp.generate(&mut pre, scopes, tsm)?;
                 append_line(&mut pre, &format!("  ret {}", ret));
                 append_line(lines, &pre);
-            },
+            }
             Self::Assign(lval, exp) => {
                 let id = lval.generate(&mut String::new(), scopes, tsm)?;
                 let SymbolTableValue::Var(left) = scopes.get_value(&id)? else {
@@ -117,12 +117,11 @@ impl KoopaTextGenerate for Stmt {
                 let mut pre = String::new();
                 let right = exp.generate(&mut pre, scopes, tsm)?;
                 append_line(lines, &pre);
-                
+
                 let new_line = format!("  store {}, {}", right, left);
                 append_line(lines, &new_line);
-            },
+            }
         }
-        
 
         Ok(String::new())
     }
@@ -219,7 +218,8 @@ impl KoopaTextGenerate for VarDef {
         append_line(lines, &format!("  @{} = alloc i32", self.ident));
         scopes.add_value(&self.ident, &format!("@{}", self.ident), false)?;
 
-        if let Some(ref init) = self.init { // has initial value
+        if let Some(ref init) = self.init {
+            // has initial value
             let mut pre = String::new();
             let init_handle = init.generate(&mut pre, scopes, tsm)?;
             append_line(lines, &pre);
@@ -238,7 +238,7 @@ impl KoopaTextGenerate for InitVal {
         tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
         match self {
-            Self::Exp(exp) => exp.generate(lines, scopes, tsm)
+            Self::Exp(exp) => exp.generate(lines, scopes, tsm),
         }
     }
 }
@@ -534,13 +534,13 @@ impl KoopaTextGenerate for PrimaryExp {
                     SymbolTableValue::Const(s) => {
                         // `s` is a literal value, so we can just return it.
                         Ok(s)
-                    },
+                    }
                     SymbolTableValue::Var(s) => {
                         // `s` is a symbol name pointing to an address, so we need to load the value.
                         let new_temp_symbol = tsm.new_temp_symbol();
                         append_line(lines, &format!("  {} = load {}", new_temp_symbol, s));
                         Ok(new_temp_symbol)
-                    },
+                    }
                 }
             }
         }
