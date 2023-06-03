@@ -38,14 +38,8 @@ pub enum Decl {
 }
 
 #[derive(Debug)]
-pub struct ConstDecl {
-    pub const_type: BType,
+pub struct ConstDecl { // there's only `int` type in SysY!
     pub defs: Vec<ConstDef>,
-}
-
-#[derive(Debug)]
-pub enum BType {
-    Int,
 }
 
 #[derive(Debug)]
@@ -119,7 +113,7 @@ pub enum UnaryExp {
 pub enum PrimaryExp {
     Exp(Box<Exp>),
     LVal(LVal),
-    Num(Number),
+    Num(i32),
 }
 
 #[derive(Debug)]
@@ -164,9 +158,3 @@ pub enum UnaryExpOp {
     Neg,
     Not,
 }
-
-////////////////////////////////////////////////////////////////////////////
-// Types                                                                 //
-///////////////////////////////////////////////////////////////////////////
-
-type Number = i32;

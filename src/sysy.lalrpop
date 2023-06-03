@@ -40,13 +40,11 @@ Decl: Decl = {
 }
 
 ConstDecl: ConstDecl = {
-    "const" <const_type: BType> <mut defs: (<ConstDef> ",")*> <def: ConstDef> ";" => {
+    "const" "int" <mut defs: (<ConstDef> ",")*> <def: ConstDef> ";" => {
         defs.push(def);
-        ConstDecl { const_type, defs }
+        ConstDecl { defs }
     }
 }
-
-BType: BType = <bt: "int"> => BType::Int;
 
 ConstDef: ConstDef = {
     <ident: Ident> "=" <init: ConstInitVal> => ConstDef { ident, init },
@@ -100,7 +98,7 @@ UnaryExp: UnaryExp = {
 PrimaryExp: PrimaryExp = {
     "(" <exp: Exp> ")" => PrimaryExp::Exp(Box::new(exp)),
     <lval: LVal> => PrimaryExp::LVal(lval),
-    <num: Number> => PrimaryExp::Num(num),
+    <num: IntConst> => PrimaryExp::Num(num),
 }
 
 LVal: LVal = <ident: Ident> => LVal{ ident };
@@ -135,8 +133,6 @@ UnaryExpOp: UnaryExpOp = {
     "-" => UnaryExpOp::Neg,
     "!" => UnaryExpOp::Not,
 }
-
-Number: i32 = <num: IntConst> => num;
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // Terminals                                                                                    //
