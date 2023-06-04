@@ -32,6 +32,11 @@ impl Scopes {
         self.values.pop();
     }
 
+    /// Get the value (symbol name) of the given identifier.
+    ///
+    /// If the identifier is not found in the current scope,
+    /// search in the outer one.
+    /// `Err(())` is returned if the identifier is not found in all the scopes.
     pub fn get_value(&self, identifier: &str) -> Result<SymbolTableValue, ()> {
         let l = self.values.len();
         for i_ in 1..=l {
@@ -43,6 +48,9 @@ impl Scopes {
         Err(())
     }
 
+    /// Add a new value to the current scope.
+    ///
+    /// The entry is added to the symbol table at the top of the stack.
     pub fn add_value(&mut self, identifier: &str, symbol: &str, is_const: bool) -> Result<(), ()> {
         let Some(symtab) = self.values.last_mut() else {
             return Err(());

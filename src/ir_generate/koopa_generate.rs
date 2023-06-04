@@ -1,4 +1,5 @@
 use super::exp_solve::ExpSolve;
+use super::named_symbol::NamedSymbolCounter;
 use super::scopes::*;
 use super::temp_symbol::TempSymbolManager;
 use crate::ast_generate::ast::*;
@@ -14,6 +15,7 @@ pub trait KoopaTextGenerate {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()>;
 }
 
@@ -23,8 +25,9 @@ impl KoopaTextGenerate for CompUnit {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        self.func_def.generate(lines, scopes, tsm)?;
+        self.func_def.generate(lines, scopes, tsm, nsc)?;
         Ok(String::new())
     }
 }
@@ -35,13 +38,14 @@ impl KoopaTextGenerate for FuncDef {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         let mut ft_pre = String::new();
-        let ft = self.func_type.generate(&mut ft_pre, scopes, tsm)?;
+        let ft = self.func_type.generate(&mut ft_pre, scopes, tsm, nsc)?;
         let mut b = String::new();
-        self.block.generate(&mut b, scopes, tsm)?;
+        self.block.generate(&mut b, scopes, tsm, nsc)?;
 
-        let new_text = format!("fun @{}(){} {{\n{}\n}}", self.ident, ft, b,);
+        let new_text = format!("fun @{}(){} {{\n%entry:\n{}\n}}", self.ident, ft, b,);
         append_line(lines, &new_text);
 
         Ok(String::new())
@@ -54,6 +58,7 @@ impl KoopaTextGenerate for FuncType {
         _lines: &mut String,
         _scopes: &mut Scopes,
         _tsm: &mut TempSymbolManager,
+        _nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::Int => Ok(String::from(": i32")),
@@ -68,14 +73,17 @@ impl KoopaTextGenerate for Block {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        append_line(lines, "%entry:");
+        scopes.enter();
+
         for item in self.items.iter() {
             let mut s = String::new();
-            item.generate(&mut s, scopes, tsm)?;
+            item.generate(&mut s, scopes, tsm, nsc)?;
             append_line(lines, &s);
         }
 
+        scopes.exit();
         Ok(String::new())
     }
 }
@@ -86,10 +94,11 @@ impl KoopaTextGenerate for BlockItem {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
-            Self::Stmt(stmt) => stmt.generate(lines, scopes, tsm),
-            Self::Decl(decl) => decl.generate(lines, scopes, tsm),
+            Self::Stmt(stmt) => stmt.generate(lines, scopes, tsm, nsc),
+            Self::Decl(decl) => decl.generate(lines, scopes, tsm, nsc),
         }
     }
 }
@@ -100,32 +109,44 @@ impl KoopaTextGenerate for Stmt {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::Assign(lval, exp) => {
-                let id = lval.generate(&mut String::new(), scopes, tsm)?;
+                let id = lval.generate(&mut String::new(), scopes, tsm, nsc)?;
                 let SymbolTableValue::Var(left) = scopes.get_value(&id)? else {
                     return Err(()); // try to assign a constant
                 };
 
                 let mut pre = String::new();
-                let right = exp.generate(&mut pre, scopes, tsm)?;
+                let right = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
 
                 let new_line = format!("  store {}, {}", right, left);
                 append_line(lines, &new_line);
             }
+            Self::Exp(exp) => {
+                if let Some(expression) = exp {
+                    let mut pre = String::new();
+                    expression.generate(&mut pre, scopes, tsm, nsc)?;
+                    append_line(lines, &pre);
+                }
+            }
+            Self::Block(block) => {
+                let mut pre = String::new();
+                block.generate(&mut pre, scopes, tsm, nsc)?;
+                append_line(lines, &pre);
+            }
             Self::Return(exp) => {
                 let mut pre = String::new();
                 if let Some(expression) = exp {
-                    let ret = expression.generate(&mut pre, scopes, tsm)?;
+                    let ret = expression.generate(&mut pre, scopes, tsm, nsc)?;
                     append_line(&mut pre, &format!("  ret {}", ret));
                 } else {
                     append_line(&mut pre, "  ret");
                 }
                 append_line(lines, &pre);
             }
-            _ => (),
         }
 
         Ok(String::new())
@@ -138,10 +159,11 @@ impl KoopaTextGenerate for Decl {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
-            Self::Const(const_decl) => const_decl.generate(lines, scopes, tsm),
-            Self::Var(var_decl) => var_decl.generate(lines, scopes, tsm),
+            Self::Const(const_decl) => const_decl.generate(lines, scopes, tsm, nsc),
+            Self::Var(var_decl) => var_decl.generate(lines, scopes, tsm, nsc),
         }
     }
 }
@@ -152,10 +174,11 @@ impl KoopaTextGenerate for ConstDecl {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         for def in self.defs.iter() {
             let mut pre = String::new();
-            def.generate(&mut pre, scopes, tsm)?;
+            def.generate(&mut pre, scopes, tsm, nsc)?;
             append_line(lines, &pre);
         }
 
@@ -169,13 +192,14 @@ impl KoopaTextGenerate for ConstDef {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         // In SysY, constants are always evaluated at compile time.
         // In the corresponding Koopa code, constants are replaced by their values.
         // So we can just evaluate the constant value and then add the constant to the symbol table.
         // There's no need to generate any Koopa code!
         let mut pre = String::new();
-        let init = self.init.generate(&mut pre, scopes, tsm)?;
+        let init = self.init.generate(&mut pre, scopes, tsm, nsc)?;
         append_line(lines, &pre); // `pre` is empty.
         scopes.add_value(&self.ident, &init, true)?;
 
@@ -189,9 +213,10 @@ impl KoopaTextGenerate for ConstInitVal {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
-            Self::Exp(exp) => exp.generate(lines, scopes, tsm),
+            Self::Exp(exp) => exp.generate(lines, scopes, tsm, nsc),
         }
     }
 }
@@ -202,10 +227,11 @@ impl KoopaTextGenerate for VarDecl {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         for def in self.defs.iter() {
             let mut pre = String::new();
-            def.generate(&mut pre, scopes, tsm)?;
+            def.generate(&mut pre, scopes, tsm, nsc)?;
             append_line(lines, &pre);
         }
 
@@ -219,16 +245,21 @@ impl KoopaTextGenerate for VarDef {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        append_line(lines, &format!("  @{} = alloc i32", self.ident));
-        scopes.add_value(&self.ident, &format!("@{}", self.ident), false)?;
+        nsc.inc(&self.ident);
+        let Some(symbol_name) = nsc.get_named_symbol(&self.ident) else {
+            return Err(())
+        };
+        append_line(lines, &format!("  @{} = alloc i32", symbol_name));
+        scopes.add_value(&self.ident, &format!("@{}", symbol_name), false)?;
 
         if let Some(ref init) = self.init {
             // has initial value
             let mut pre = String::new();
-            let init_handle = init.generate(&mut pre, scopes, tsm)?;
+            let init_handle = init.generate(&mut pre, scopes, tsm, nsc)?;
             append_line(lines, &pre);
-            append_line(lines, &format!("  store {}, @{}", init_handle, self.ident));
+            append_line(lines, &format!("  store {}, @{}", init_handle, symbol_name));
         }
 
         Ok(String::new())
@@ -241,9 +272,10 @@ impl KoopaTextGenerate for InitVal {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
-            Self::Exp(exp) => exp.generate(lines, scopes, tsm),
+            Self::Exp(exp) => exp.generate(lines, scopes, tsm, nsc),
         }
     }
 }
@@ -254,6 +286,7 @@ impl KoopaTextGenerate for ConstExp {
         _lines: &mut String,
         scopes: &mut Scopes,
         _tsm: &mut TempSymbolManager,
+        _nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         let v = self.solve(scopes)?; // evaluate the constant expression while generating AST.
         Ok(v.to_string()) // return the constant value (as a `String`).
@@ -266,9 +299,10 @@ impl KoopaTextGenerate for Exp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         let mut pre = String::new();
-        let var = self.exp.generate(&mut pre, scopes, tsm)?;
+        let var = self.exp.generate(&mut pre, scopes, tsm, nsc)?;
         append_line(lines, &pre);
         Ok(var)
     }
@@ -280,19 +314,20 @@ impl KoopaTextGenerate for LOrExp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::LAnd(exp) => {
                 let mut pre = String::new();
-                let var = exp.generate(&mut pre, scopes, tsm)?;
+                let var = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
             }
             Self::LOrLAnd(exp1, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
-                let var1 = exp1.generate(&mut pre1, scopes, tsm)?;
-                let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
+                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
 
@@ -311,19 +346,20 @@ impl KoopaTextGenerate for LAndExp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::Eq(exp) => {
                 let mut pre = String::new();
-                let var = exp.generate(&mut pre, scopes, tsm)?;
+                let var = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
             }
             Self::LAndEq(exp1, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
-                let var1 = exp1.generate(&mut pre1, scopes, tsm)?;
-                let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
+                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
 
@@ -342,19 +378,20 @@ impl KoopaTextGenerate for EqExp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::Rel(exp) => {
                 let mut pre = String::new();
-                let var = exp.generate(&mut pre, scopes, tsm)?;
+                let var = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
             }
             Self::EqRel(exp1, op, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
-                let var1 = exp1.generate(&mut pre1, scopes, tsm)?;
-                let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
+                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
 
@@ -377,19 +414,20 @@ impl KoopaTextGenerate for RelExp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::Add(exp) => {
                 let mut pre = String::new();
-                let var = exp.generate(&mut pre, scopes, tsm)?;
+                let var = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
             }
             Self::RelAdd(exp1, op, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
-                let var1 = exp1.generate(&mut pre1, scopes, tsm)?;
-                let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
+                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
 
@@ -414,19 +452,20 @@ impl KoopaTextGenerate for AddExp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::Mul(exp) => {
                 let mut pre = String::new();
-                let var = exp.generate(&mut pre, scopes, tsm)?;
+                let var = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
             }
             Self::AddMul(exp1, op, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
-                let var1 = exp1.generate(&mut pre1, scopes, tsm)?;
-                let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
+                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
 
@@ -449,19 +488,20 @@ impl KoopaTextGenerate for MulExp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::Unary(exp) => {
                 let mut pre = String::new();
-                let var = exp.generate(&mut pre, scopes, tsm)?;
+                let var = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
             }
             Self::MulUnary(exp1, op, exp2) => {
                 let mut pre1 = String::new();
                 let mut pre2 = String::new();
-                let var1 = exp1.generate(&mut pre1, scopes, tsm)?;
-                let var2 = exp2.generate(&mut pre2, scopes, tsm)?;
+                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
+                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
                 append_line(lines, &pre1);
                 append_line(lines, &pre2);
 
@@ -485,16 +525,17 @@ impl KoopaTextGenerate for UnaryExp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         let mut pre = String::new();
         match self {
             Self::Primary(pexp) => {
-                let var = pexp.generate(&mut pre, scopes, tsm)?;
+                let var = pexp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
             }
             Self::Unary(op, uexp) => {
-                let var = uexp.generate(&mut pre, scopes, tsm)?;
+                let var = uexp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 match *op {
                     UnaryExpOp::Pos => Ok(var),
@@ -522,18 +563,19 @@ impl KoopaTextGenerate for PrimaryExp {
         lines: &mut String,
         scopes: &mut Scopes,
         tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
             Self::Exp(exp) => {
                 let mut pre = String::new();
-                let var = exp.generate(&mut pre, scopes, tsm)?;
+                let var = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
             }
             Self::Num(num) => Ok(format!("{}", num)),
             Self::LVal(lval) => {
                 let mut pre = String::new();
-                let id = lval.generate(&mut pre, scopes, tsm)?;
+                let id = lval.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 match scopes.get_value(&id)? {
                     SymbolTableValue::Const(s) => {
@@ -558,6 +600,7 @@ impl KoopaTextGenerate for LVal {
         _lines: &mut String,
         _scopes: &mut Scopes,
         _tsm: &mut TempSymbolManager,
+        _nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         Ok(self.ident.clone()) // return the identifier
     }

@@ -85,7 +85,7 @@ impl RiscvGenerate for FunctionData {
         append_line(lines, &name_lines);
         let mut pro = String::from("  # no prologue");
         let mut epi = String::from("  # no epilogue");
-        let sp_shift = cxt.total_offset();
+        let sp_shift = ceil_to_k(cxt.total_offset(), 16usize);
         if sp_shift > 0 {
             pro = format!("  addi sp, sp, -{}", sp_shift);
             epi = format!("  addi sp, sp, {}", sp_shift);

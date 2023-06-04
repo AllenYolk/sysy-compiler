@@ -56,3 +56,8 @@ fn koopa_mod_test_lv4_2() {
         "tests/koopa_scripts/lv4-2.koopa",
     );
 }
+
+#[test]
+fn koopa_mod_test_lv5() {
+    koopa_mod_test("tests/sysy_scripts/lv5.c", "tests/koopa_scripts/lv5.koopa");
+}

@@ -1,5 +1,6 @@
 mod exp_solve;
 mod koopa_generate;
+mod named_symbol;
 mod scopes;
 mod temp_symbol;
 
@@ -7,6 +8,7 @@ use crate::ast_generate::ast::*;
 use koopa::front::Driver;
 use koopa::ir::*;
 use koopa_generate::KoopaTextGenerate;
+use named_symbol::NamedSymbolCounter;
 use scopes::Scopes;
 use temp_symbol::TempSymbolManager;
 
@@ -20,7 +22,12 @@ use temp_symbol::TempSymbolManager;
 /// An error may occur when the AST is not valid.
 pub fn parse_ast_to_koopa_text(ast: &CompUnit) -> Result<String, ()> {
     let mut text = String::new();
-    ast.generate(&mut text, &mut Scopes::new(), &mut TempSymbolManager::new())?;
+    ast.generate(
+        &mut text,
+        &mut Scopes::new(),
+        &mut TempSymbolManager::new(),
+        &mut NamedSymbolCounter::new(),
+    )?;
     Ok(text)
 }
 
