@@ -41,7 +41,7 @@ impl KoopaTextGenerate for FuncDef {
         let mut b = String::new();
         self.block.generate(&mut b, scopes, tsm)?;
 
-        let new_text = format!("fun @{}(): {} {{\n{}\n}}", self.ident, ft, b,);
+        let new_text = format!("fun @{}(){} {{\n{}\n}}", self.ident, ft, b,);
         append_line(lines, &new_text);
 
         Ok(String::new())
@@ -56,8 +56,8 @@ impl KoopaTextGenerate for FuncType {
         _tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
         match self {
-            Self::Int => Ok(String::from("i32")),
-            // _ => Err(()),
+            Self::Int => Ok(String::from(": i32")),
+            Self::Void => Ok(String::new()),
         }
     }
 }
@@ -102,12 +102,6 @@ impl KoopaTextGenerate for Stmt {
         tsm: &mut TempSymbolManager,
     ) -> Result<String, ()> {
         match self {
-            Self::Return(exp) => {
-                let mut pre = String::new();
-                let ret = exp.generate(&mut pre, scopes, tsm)?;
-                append_line(&mut pre, &format!("  ret {}", ret));
-                append_line(lines, &pre);
-            }
             Self::Assign(lval, exp) => {
                 let id = lval.generate(&mut String::new(), scopes, tsm)?;
                 let SymbolTableValue::Var(left) = scopes.get_value(&id)? else {
@@ -121,6 +115,17 @@ impl KoopaTextGenerate for Stmt {
                 let new_line = format!("  store {}, {}", right, left);
                 append_line(lines, &new_line);
             }
+            Self::Return(exp) => {
+                let mut pre = String::new();
+                if let Some(expression) = exp {
+                    let ret = expression.generate(&mut pre, scopes, tsm)?;
+                    append_line(&mut pre, &format!("  ret {}", ret));
+                } else {
+                    append_line(&mut pre, "  ret");
+                }
+                append_line(lines, &pre);
+            }
+            _ => (),
         }
 
         Ok(String::new())

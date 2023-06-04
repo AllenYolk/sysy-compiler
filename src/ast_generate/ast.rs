@@ -13,6 +13,7 @@ pub struct FuncDef {
 #[derive(Debug)]
 pub enum FuncType {
     Int,
+    Void,
 }
 
 #[derive(Debug)]
@@ -26,10 +27,16 @@ pub enum BlockItem {
     Decl(Decl),
 }
 
+/// Stmt ::= LVal "=" Exp ";"
+///        | [Exp] ";"
+///        | Block
+///        | "return" [Exp] ";";
 #[derive(Debug)]
 pub enum Stmt {
     Assign(LVal, Exp),
-    Return(Exp),
+    Exp(Option<Exp>),
+    Block(Block),
+    Return(Option<Exp>),
 }
 
 #[derive(Debug)]

@@ -23,7 +23,10 @@ FuncDef: FuncDef = {
     <func_type: FuncType> <ident: Ident> "(" ")" <block: Block> => FuncDef { <> }
 }
 
-FuncType: FuncType = <ft: "int"> => FuncType::Int;
+FuncType: FuncType = {
+    <ft: "int"> => FuncType::Int,
+    <ft: "void"> => FuncType::Void,
+}
 
 // use the `*` macro of `lalrpop`
 Block: Block = "{" <items: (<BlockItem>)*> "}" => Block { items };
@@ -34,8 +37,10 @@ BlockItem: BlockItem = {
 }
 
 Stmt: Stmt = {
-    "return" <exp: Exp> ";" => Stmt::Return(exp),
     <lval: LVal> "=" <exp: Exp> ";" => Stmt::Assign(lval, exp),
+    <exp: (Exp)?> ";" => Stmt::Exp(exp),
+    <block: Block> => Stmt::Block(block),
+    "return" <exp: (Exp)?> ";" => Stmt::Return(exp),
 }
 
 Decl: Decl = {
