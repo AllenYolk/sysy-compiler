@@ -53,3 +53,8 @@ fn riscv_mod_test_lv4_2() {
         "tests/riscv_scripts/lv4-2.asm",
     );
 }
+
+#[test]
+fn riscv_mod_test_lv5() {
+    riscv_mod_test("tests/sysy_scripts/lv5.c", "tests/riscv_scripts/lv5.asm");
+}

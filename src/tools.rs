@@ -1,3 +1,5 @@
+use std::ops::*;
+
 /// Append a string slice to a mutable reference of another string,
 /// starting from a new line.
 ///
@@ -9,6 +11,17 @@ pub fn append_line(s: &mut String, l: &str) {
         s.push('\n');
     }
     s.push_str(l);
+}
+
+pub fn ceil_to_k<T>(x: T, k: T) -> T
+where
+    T: Rem<Output = T> + Add<Output = T> + Sub<Output = T> + Copy + PartialEq + From<u8>,
+{
+    if x % k == 0u8.into() {
+        x
+    } else {
+        x + k - x % k
+    }
 }
 
 #[cfg(test)]
