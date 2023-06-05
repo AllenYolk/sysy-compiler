@@ -1,0 +1,59 @@
+fun @main(): i32 {
+%entry:
+  @a_1 = alloc i32
+  store 2, @a_1
+  %0 = load @a_1
+  br %0, %if_then_1, %if_else_1
+
+%if_then_1:
+  %1 = load @a_1
+  %2 = add %1, 1
+  store %2, @a_1
+  @b_1 = alloc i32
+  %3 = load @a_1
+  %4 = mul 2, %3
+  store %4, @b_1
+  %5 = load @a_1
+  br %5, %if_then_2, %if_else_2
+
+%if_then_2:
+  %6 = load @b_1
+  %7 = add %6, 1
+  store %7, @b_1
+  %8 = load @b_1
+  %9 = lt %8, 0
+  br %9, %if_then_3, %if_else_3
+
+%if_then_3:
+  %10 = load @b_1
+  %11 = sub 0, %10
+  store %11, @b_1
+  jump %if_end_3
+
+%if_else_3:
+  jump %if_end_3
+
+%if_end_3:
+  jump %if_end_2
+
+%if_else_2:
+  %12 = load @b_1
+  %13 = mod %12, 4
+  store %13, @b_1
+  jump %if_end_2
+
+%if_end_2:
+  %14 = load @a_1
+  %15 = load @b_1
+  %16 = add %14, %15
+  store %16, @a_1
+  jump %if_end_1
+
+%if_else_1:
+  store 0, @a_1
+  jump %if_end_1
+
+%if_end_1:
+  %17 = load @a_1
+  ret %17
+}

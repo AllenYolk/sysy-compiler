@@ -1,5 +1,6 @@
 int main() {
   int a = 2;
+
   if (a) {
     a = a + 1;
     int b = 2 * a;
@@ -10,5 +11,13 @@ int main() {
   } else {
     a = 0;
   }  // fafafafa
+
+  /*
+  if (a) {
+    a = a + 1;
+  } else {
+    a = a - 1;
+  }
+  */
   return a; // for level 6.1
 }

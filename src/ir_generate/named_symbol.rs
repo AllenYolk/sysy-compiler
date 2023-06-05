@@ -18,7 +18,7 @@ impl NamedSymbolCounter {
         }
     }
 
-    /// Increase the counter of the symbol with the given name.
+    /// Increase the counter of the symbol with the given id.
     pub fn inc(&mut self, id: &str) {
         let counter = self.counter.entry(id.to_string()).or_insert(0);
         *counter += 1;
@@ -29,14 +29,23 @@ impl NamedSymbolCounter {
         self.counter.get(id).map(|&x| x)
     }
 
-    /// Get the name of the symbol with the given name.
+    /// Get the full name of the symbol with the given name.
     ///
-    /// The symbol name has the form "id_counter".
+    /// The full symbol name has the form "id_counter" (without '%' or '@' prefix).
     pub fn get_named_symbol(&self, id: &str) -> Option<String> {
         match self.get_count(id) {
             Some(c) => Some(format!("{}_{}", id, c)),
             None => None,
         }
+    }
+
+    /// Increase the counter of the symbol with the given id, and return the full name of the symbol.
+    pub fn inc_and_get_named_symbol(&mut self, id: &str) -> Result<String, ()> {
+        self.inc(id);
+        let Some(sym) = self.get_named_symbol(id) else {
+            return Err(());
+        };
+        Ok(sym)
     }
 }
 

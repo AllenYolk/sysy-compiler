@@ -137,6 +137,37 @@ impl KoopaTextGenerate for Stmt {
                 block.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
             }
+            Self::If(cond, then, otherwise) => {
+                // prepare the labels
+                let then_label = nsc.inc_and_get_named_symbol("if_then")?;
+                let else_label = nsc.inc_and_get_named_symbol("if_else")?;
+                let end_label = nsc.inc_and_get_named_symbol("if_end")?;
+
+                // cond generation
+                let mut text_for_cond = String::new();
+                let cond_handle = cond.generate(&mut text_for_cond, scopes, tsm, nsc)?;
+                append_line(lines, &text_for_cond);
+                append_line(lines, &format!("  br {}, %{}, %{}", cond_handle, then_label, else_label));
+
+                // then generation
+                append_line(lines, &format!("\n%{}:", then_label));
+                let mut text_for_then = String::new();
+                then.generate(&mut text_for_then, scopes, tsm, nsc)?;
+                append_line(lines, &text_for_then);
+                append_line(lines, &format!("  jump %{}", end_label));
+
+                // else generation
+                append_line(lines, &format!("\n%{}:", else_label));
+                let mut text_for_else = String::new();
+                if let Some(otherwise) = otherwise {
+                    otherwise.generate(&mut text_for_else, scopes, tsm, nsc)?;
+                }
+                append_line(lines, &text_for_else);
+                append_line(lines, &format!("  jump %{}", end_label));
+
+                // end label generation
+                append_line(lines, &format!("\n%{}:", end_label));
+            }
             Self::Return(exp) => {
                 let mut pre = String::new();
                 if let Some(expression) = exp {
@@ -147,7 +178,6 @@ impl KoopaTextGenerate for Stmt {
                 }
                 append_line(lines, &pre);
             }
-            _ => (),
         }
 
         Ok(String::new())
@@ -248,10 +278,7 @@ impl KoopaTextGenerate for VarDef {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        nsc.inc(&self.ident);
-        let Some(symbol_name) = nsc.get_named_symbol(&self.ident) else {
-            return Err(())
-        };
+        let symbol_name = nsc.inc_and_get_named_symbol(&self.ident)?;
         append_line(lines, &format!("  @{} = alloc i32", symbol_name));
         scopes.add_value(&self.ident, &format!("@{}", symbol_name), false)?;
 
