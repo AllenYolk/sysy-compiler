@@ -147,6 +147,7 @@ impl KoopaTextGenerate for Stmt {
                 }
                 append_line(lines, &pre);
             }
+            _ => (),
         }
 
         Ok(String::new())

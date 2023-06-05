@@ -36,11 +36,41 @@ BlockItem: BlockItem = {
     <decl: Decl> => BlockItem::Decl(decl),
 }
 
+/// Avoid the "dangling else" problem: "else" is matched to the nearest "if" before it.
+/// Hence, if these's a statement between "if" and "else", it must be a closed one (with "if" and "else" paired)!
+/// Accordingly, we may remove ambiguity by splitting the definition of `Stmt`.
+/// For further information, refer to https://en.wikipedia.org/wiki/Dangling_else .
+///
+///  Stmt ::= ClosedStmt
+///         | OpenStmt
 Stmt: Stmt = {
+    <closed: ClosedStmt> => closed,
+    <open: OpenStmt> => open,
+}
+
+/// ClosedStmt ::= "if" "(" Exp ")" ClosedStmt "else" ClosedStmt
+///              | OtherStmt
+/// OtherStmt ::= LVal "=" Exp ";"
+///              | [Exp] ";"
+///              | Block
+///              | "return" [Exp] ";";
+ClosedStmt: Stmt = {
     <lval: LVal> "=" <exp: Exp> ";" => Stmt::Assign(lval, exp),
     <exp: (Exp)?> ";" => Stmt::Exp(exp),
     <block: Block> => Stmt::Block(block),
     "return" <exp: (Exp)?> ";" => Stmt::Return(exp),
+    "if" "(" <cond: Exp> ")" <then: ClosedStmt> "else" <otherwise: ClosedStmt> => {
+        Stmt::If(cond, Box::new(then), Some(Box::new(otherwise)))
+    },
+}
+
+/// OpenStmt ::= "if" "(" Exp ")" Stmt
+///            | "if" "(" Exp ")" ClosedStmt "else" OpenStmt
+OpenStmt: Stmt = {
+    "if" "(" <cond: Exp> ")" <then: Stmt> => Stmt::If(cond, Box::new(then), None),
+    "if" "(" <cond: Exp> ")" <then: ClosedStmt> "else" <otherwise: OpenStmt> => {
+        Stmt::If(cond, Box::new(then), Some(Box::new(otherwise)))
+    },
 }
 
 Decl: Decl = {

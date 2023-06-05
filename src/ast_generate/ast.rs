@@ -3,6 +3,7 @@ pub struct CompUnit {
     pub func_def: FuncDef,
 }
 
+/// FuncDef ::= FuncType IDENT "(" ")" Block;
 #[derive(Debug)]
 pub struct FuncDef {
     pub func_type: FuncType,
@@ -30,12 +31,14 @@ pub enum BlockItem {
 /// Stmt ::= LVal "=" Exp ";"
 ///        | [Exp] ";"
 ///        | Block
+///        | "if" "(" Exp ")" Stmt ["else" Stmt]
 ///        | "return" [Exp] ";";
 #[derive(Debug)]
 pub enum Stmt {
     Assign(LVal, Exp),
     Exp(Option<Exp>),
     Block(Block),
+    If(Exp, Box<Stmt>, Option<Box<Stmt> >),
     Return(Option<Exp>),
 }
 
@@ -45,6 +48,7 @@ pub enum Decl {
     Var(VarDecl),
 }
 
+/// ConstDecl ::= "const" BType ConstDef {"," ConstDef} ";";
 #[derive(Debug)]
 pub struct ConstDecl {
     // there's only `int` type in SysY!
@@ -62,6 +66,7 @@ pub enum ConstInitVal {
     Exp(ConstExp),
 }
 
+/// VarDecl ::= BType VarDef {"," VarDef} ";";
 #[derive(Debug)]
 pub struct VarDecl {
     // there's only `int` type in SysY!
