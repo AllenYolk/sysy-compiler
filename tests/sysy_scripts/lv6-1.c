@@ -4,12 +4,13 @@ int main() {
   if (a) {
     a = a + 1;
     int b = 2 * a;
+    int a = 0;
     if (a) {b = b + 1;
     if (b < 0) b = -b; }
     else b = b % 4;
     a = a + b;
   } else {
-    a = 0;
+    a = 4;
   }  // fafafafa
   
   /*

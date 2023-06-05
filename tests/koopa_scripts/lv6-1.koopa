@@ -13,7 +13,9 @@ fun @main(): i32 {
   %3 = load @a_1
   %4 = mul 2, %3
   store %4, @b_1
-  %5 = load @a_1
+  @a_2 = alloc i32
+  store 0, @a_2
+  %5 = load @a_2
   br %5, %if_then_2, %if_else_2
 
 %if_then_2:
@@ -43,14 +45,14 @@ fun @main(): i32 {
   jump %if_end_2
 
 %if_end_2:
-  %14 = load @a_1
+  %14 = load @a_2
   %15 = load @b_1
   %16 = add %14, %15
-  store %16, @a_1
+  store %16, @a_2
   jump %if_end_1
 
 %if_else_1:
-  store 0, @a_1
+  store 4, @a_1
   jump %if_end_1
 
 %if_end_1:

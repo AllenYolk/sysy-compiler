@@ -1,7 +1,8 @@
   .text
   .globl main
 main:
-  addi sp, sp, -40
+  addi sp, sp, -48
+entry:
   li t0, 10
   li t1, 4
   mul t0, t0, t1
@@ -35,5 +36,5 @@ main:
   rem t0, t0, t1
   sw t0, 36(sp)
   lw a0, 36(sp)
-  addi sp, sp, 40
+  addi sp, sp, 48
   ret

@@ -74,7 +74,10 @@ impl RiscvGenerate for FunctionData {
             let &Some(ref bb_name) = bbd.name() else {
                 return Err(());
             };
-            append_line(&mut body_lines, &format!("{}:", bb_name.replace("%", "").replace("@", "")));
+            append_line(
+                &mut body_lines,
+                &format!("{}:", bb_name.replace("%", "").replace("@", "")),
+            );
 
             // generate basic block instructions
             for &inst_val in node.insts().keys() {
@@ -112,7 +115,7 @@ impl RiscvGenerate for Value {
     type Ret = ValueLocation;
 
     /// Find the location of the `Value`.
-    /// 
+    ///
     /// Search in the HashMap `cxt.value_locations`.
     fn generate(&self, _lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let Some(value_data) = cxt.get_value_data(*self) else {
@@ -281,8 +284,17 @@ impl RiscvGenerate for values::Branch {
             return Err(());
         };
 
-        append_line(lines, &format!("  beqz t0, {}", true_bb_name.replace("%", "").replace("@", "")));
-        append_line(lines, &format!("  j {}", false_bb_name.replace("%", "").replace("@", "")));
+        append_line(
+            lines,
+            &format!(
+                "  beqz t0, {}",
+                true_bb_name.replace("%", "").replace("@", "")
+            ),
+        );
+        append_line(
+            lines,
+            &format!("  j {}", false_bb_name.replace("%", "").replace("@", "")),
+        );
 
         Ok(ValueLocation::None)
     }
@@ -299,7 +311,10 @@ impl RiscvGenerate for values::Jump {
         let Some(bb_name) = bb_data.name() else {
             return Err(());
         };
-        append_line(lines, &format!("  j {}", bb_name.replace("%", "").replace("@", "")));
+        append_line(
+            lines,
+            &format!("  j {}", bb_name.replace("%", "").replace("@", "")),
+        );
 
         Ok(ValueLocation::None)
     }

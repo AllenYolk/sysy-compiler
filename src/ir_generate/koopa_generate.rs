@@ -139,34 +139,37 @@ impl KoopaTextGenerate for Stmt {
             }
             Self::If(cond, then, otherwise) => {
                 // prepare the labels
-                let then_label = nsc.inc_and_get_named_symbol("if_then")?;
-                let else_label = nsc.inc_and_get_named_symbol("if_else")?;
-                let end_label = nsc.inc_and_get_named_symbol("if_end")?;
+                let then_label = nsc.inc_and_get_named_symbol("%if_then")?;
+                let else_label = nsc.inc_and_get_named_symbol("%if_else")?;
+                let end_label = nsc.inc_and_get_named_symbol("%if_end")?;
 
                 // cond generation
                 let mut text_for_cond = String::new();
                 let cond_handle = cond.generate(&mut text_for_cond, scopes, tsm, nsc)?;
                 append_line(lines, &text_for_cond);
-                append_line(lines, &format!("  br {}, %{}, %{}", cond_handle, then_label, else_label));
+                append_line(
+                    lines,
+                    &format!("  br {}, {}, {}", cond_handle, then_label, else_label),
+                );
 
                 // then generation
-                append_line(lines, &format!("\n%{}:", then_label));
+                append_line(lines, &format!("\n{}:", then_label));
                 let mut text_for_then = String::new();
                 then.generate(&mut text_for_then, scopes, tsm, nsc)?;
                 append_line(lines, &text_for_then);
-                append_line(lines, &format!("  jump %{}", end_label));
+                append_line(lines, &format!("  jump {}", end_label));
 
                 // else generation
-                append_line(lines, &format!("\n%{}:", else_label));
+                append_line(lines, &format!("\n{}:", else_label));
                 let mut text_for_else = String::new();
                 if let Some(otherwise) = otherwise {
                     otherwise.generate(&mut text_for_else, scopes, tsm, nsc)?;
                 }
                 append_line(lines, &text_for_else);
-                append_line(lines, &format!("  jump %{}", end_label));
+                append_line(lines, &format!("  jump {}", end_label));
 
                 // end label generation
-                append_line(lines, &format!("\n%{}:", end_label));
+                append_line(lines, &format!("\n{}:", end_label));
             }
             Self::Return(exp) => {
                 let mut pre = String::new();
@@ -278,16 +281,16 @@ impl KoopaTextGenerate for VarDef {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        let symbol_name = nsc.inc_and_get_named_symbol(&self.ident)?;
-        append_line(lines, &format!("  @{} = alloc i32", symbol_name));
-        scopes.add_value(&self.ident, &format!("@{}", symbol_name), false)?;
+        let symbol_name = nsc.inc_and_get_named_symbol(&format!("@{}", &self.ident))?;
+        append_line(lines, &format!("  {} = alloc i32", symbol_name));
+        scopes.add_value(&self.ident, &format!("{}", symbol_name), false)?;
 
         if let Some(ref init) = self.init {
             // has initial value
             let mut pre = String::new();
             let init_handle = init.generate(&mut pre, scopes, tsm, nsc)?;
             append_line(lines, &pre);
-            append_line(lines, &format!("  store {}, @{}", init_handle, symbol_name));
+            append_line(lines, &format!("  store {}, {}", init_handle, symbol_name));
         }
 
         Ok(String::new())
@@ -352,16 +355,41 @@ impl KoopaTextGenerate for LOrExp {
                 Ok(var)
             }
             Self::LOrLAnd(exp1, exp2) => {
-                let mut pre1 = String::new();
-                let mut pre2 = String::new();
-                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
-                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
-                append_line(lines, &pre1);
-                append_line(lines, &pre2);
+                // Prepare the labels
+                let rhs_label = nsc.inc_and_get_named_symbol("%or_rhs")?;
+                let end_label = nsc.inc_and_get_named_symbol("%or_end")?;
 
+                // Koopa has "SSA" feature, so we have to allocate a memory slot to store the result of or operation.
+                // Since the result is actually a temporary value, we don't need to add it to the symbol table.
+                let result_name = nsc.inc_and_get_named_symbol("%or")?;
+                append_line(lines, &format!("  {} = alloc i32", result_name));
+
+                // left-hand side
+                let mut pre1 = String::new();
+                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
+                append_line(lines, &pre1);
+                let lvar1 = tsm.new_temp_symbol();
+                append_line(lines, &format!("  {} = ne {}, 0", lvar1, var1));
+                append_line(lines, &format!("  store {}, {}", lvar1, result_name));
+                append_line(
+                    lines,
+                    &format!("  br {}, {}, {}", lvar1, end_label, rhs_label),
+                );
+
+                // right-hand side
+                append_line(lines, &format!("\n{}:", rhs_label));
+                let mut pre2 = String::new();
+                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
+                append_line(lines, &pre2);
+                let lvar2 = tsm.new_temp_symbol();
+                append_line(lines, &format!("  {} = ne {}, 0", lvar2, var2));
+                append_line(lines, &format!("  store {}, {}", lvar2, result_name));
+                append_line(lines, &format!("  jump {}", end_label));
+
+                // end
+                append_line(lines, &format!("\n{}:", end_label));
                 let new_var = tsm.new_temp_symbol();
-                let new_line = format!("  {} = or {}, {}", new_var, var1, var2);
-                append_line(lines, &new_line);
+                append_line(lines, &format!("  {} = load {}", new_var, result_name));
                 Ok(new_var)
             }
         }
@@ -384,16 +412,41 @@ impl KoopaTextGenerate for LAndExp {
                 Ok(var)
             }
             Self::LAndEq(exp1, exp2) => {
-                let mut pre1 = String::new();
-                let mut pre2 = String::new();
-                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
-                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
-                append_line(lines, &pre1);
-                append_line(lines, &pre2);
+                // Prepare the labels
+                let rhs_label = nsc.inc_and_get_named_symbol("%and_rhs")?;
+                let end_label = nsc.inc_and_get_named_symbol("%and_end")?;
 
+                // Koopa has "SSA" feature, so we have to allocate a memory slot to store the result of or operation.
+                // Since the result is actually a temporary value, we don't need to add it to the symbol table.
+                let result_name = nsc.inc_and_get_named_symbol("%and")?;
+                append_line(lines, &format!("  {} = alloc i32", result_name));
+
+                // left-hand side
+                let mut pre1 = String::new();
+                let var1 = exp1.generate(&mut pre1, scopes, tsm, nsc)?;
+                append_line(lines, &pre1);
+                let lvar1 = tsm.new_temp_symbol();
+                append_line(lines, &format!("  {} = ne {}, 0", lvar1, var1));
+                append_line(lines, &format!("  store {}, {}", lvar1, result_name));
+                append_line(
+                    lines,
+                    &format!("  br {}, {}, {}", lvar1, rhs_label, end_label),
+                );
+
+                // right-hand side
+                append_line(lines, &format!("\n{}:", rhs_label));
+                let mut pre2 = String::new();
+                let var2 = exp2.generate(&mut pre2, scopes, tsm, nsc)?;
+                append_line(lines, &pre2);
+                let lvar2 = tsm.new_temp_symbol();
+                append_line(lines, &format!("  {} = ne {}, 0", lvar2, var2));
+                append_line(lines, &format!("  store {}, {}", lvar2, result_name));
+                append_line(lines, &format!("  jump {}", end_label));
+
+                // end
+                append_line(lines, &format!("\n{}:", end_label));
                 let new_var = tsm.new_temp_symbol();
-                let new_line = format!("  {} = and {}, {}", new_var, var1, var2);
-                append_line(lines, &new_line);
+                append_line(lines, &format!("  {} = load {}", new_var, result_name));
                 Ok(new_var)
             }
         }
