@@ -24,14 +24,28 @@ impl<'a> ProgramContext<'a> {
         }
     }
 
-    /// Given a `Value` handler, return the corresponding `ValueData` in the current program context
-    pub fn get_value_data(&self, val: Value) -> Option<&'a ValueData> {
-        // `Value` has implemented the Copy trait!
+    /// Get the `FunctionData` corresponding to the `func` field of the struct.
+    pub fn get_current_function_data(&self) -> Option<&FunctionData> {
         let Some(cur_func) = self.func else {
             return None;
         };
-        let cur_func_data = self.program.func(cur_func);
+        Some(self.program.func(cur_func))
+    }
+
+    /// Given a `Value` handler, return the corresponding `ValueData` in the current program context
+    pub fn get_value_data(&self, val: Value) -> Option<&ValueData> {
+        // `Value` has implemented the Copy trait!
+        let Some(cur_func_data) = self.get_current_function_data() else {
+            return None;
+        };
         Some(cur_func_data.dfg().value(val))
+    }
+
+    pub fn get_basic_block_data(&self, bb: BasicBlock) -> Option<&BasicBlockData> {
+        let Some(cur_func_data) = self.get_current_function_data() else {
+            return None;
+        };
+        Some(cur_func_data.dfg().bb(bb))
     }
 
     pub fn reset_offset(&mut self) {

@@ -66,7 +66,17 @@ impl RiscvGenerate for FunctionData {
         append_line(&mut name_lines, &format!("{}:", func_name));
 
         let mut body_lines = String::new();
-        for (_bb, node) in self.layout().bbs() {
+        for (bb, node) in self.layout().bbs() {
+            // get basic block name
+            let Some(bbd) = cxt.get_basic_block_data(*bb) else {
+                return Err(());
+            };
+            let &Some(ref bb_name) = bbd.name() else {
+                return Err(());
+            };
+            append_line(&mut body_lines, &format!("{}:", bb_name.replace("%", "").replace("@", "")));
+
+            // generate basic block instructions
             for &inst_val in node.insts().keys() {
                 let inst_val_data = self.dfg().value(inst_val); // an Koopa instruction
                 let mut new_lines = String::new();
@@ -101,6 +111,9 @@ impl RiscvGenerate for FunctionData {
 impl RiscvGenerate for Value {
     type Ret = ValueLocation;
 
+    /// Find the location of the `Value`.
+    /// 
+    /// Search in the HashMap `cxt.value_locations`.
     fn generate(&self, _lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let Some(value_data) = cxt.get_value_data(*self) else {
             return Err(());
@@ -133,6 +146,10 @@ impl RiscvGenerate for ValueData {
             ValueKind::Store(val) => val.generate(lines, cxt),
             // binary operation
             ValueKind::Binary(val) => val.generate(lines, cxt),
+            // branch operation
+            ValueKind::Branch(val) => val.generate(lines, cxt),
+            // jump operation
+            ValueKind::Jump(val) => val.generate(lines, cxt),
             // function return
             ValueKind::Return(val) => val.generate(lines, cxt),
             // others
@@ -239,6 +256,52 @@ impl RiscvGenerate for values::Binary {
         append_line(lines, &format!("  sw t0, {}(sp)", offset));
 
         Ok(ValueLocation::Stack(format!("{}(sp)", offset)))
+    }
+}
+
+impl RiscvGenerate for values::Branch {
+    type Ret = ValueLocation;
+
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        let cond_value = self.cond();
+        let cond_loc = cond_value.generate(&mut String::new(), cxt)?;
+        append_line(lines, &cond_loc.move_to_reg("t0"));
+
+        // look up basic block names
+        let Some(true_bb_data) = cxt.get_basic_block_data(self.true_bb()) else {
+            return Err(());
+        };
+        let Some(false_bb_data) = cxt.get_basic_block_data(self.false_bb()) else {
+            return Err(());
+        };
+        let Some(true_bb_name) = true_bb_data.name() else {
+            return Err(());
+        };
+        let Some(false_bb_name) = false_bb_data.name() else {
+            return Err(());
+        };
+
+        append_line(lines, &format!("  beqz t0, {}", true_bb_name.replace("%", "").replace("@", "")));
+        append_line(lines, &format!("  j {}", false_bb_name.replace("%", "").replace("@", "")));
+
+        Ok(ValueLocation::None)
+    }
+}
+
+impl RiscvGenerate for values::Jump {
+    type Ret = ValueLocation;
+
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        let to_bb = self.target();
+        let Some(bb_data) = cxt.get_basic_block_data(to_bb) else {
+            return Err(());
+        };
+        let Some(bb_name) = bb_data.name() else {
+            return Err(());
+        };
+        append_line(lines, &format!("  j {}", bb_name.replace("%", "").replace("@", "")));
+
+        Ok(ValueLocation::None)
     }
 }
 
