@@ -85,3 +85,11 @@ fn koopa_mod_test_lv7_1() {
         "tests/koopa_scripts/lv7-1.koopa",
     );
 }
+
+#[test]
+fn koopa_mod_test_lv7_2() {
+    koopa_mod_test(
+        "tests/sysy_scripts/lv7-2.c",
+        "tests/koopa_scripts/lv7-2.koopa",
+    )
+}

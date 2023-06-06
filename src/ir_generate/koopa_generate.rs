@@ -176,7 +176,7 @@ impl KoopaTextGenerate for Stmt {
                 let entry_label = nsc.inc_and_get_named_symbol("%while_entry")?;
                 let body_label = nsc.inc_and_get_named_symbol("%while_body")?;
                 let end_label = nsc.inc_and_get_named_symbol("%while_end")?;
- 
+
                 // cond generation
                 append_line(lines, &format!("  jump {}", entry_label));
                 append_line(lines, &format!("\n{}:", entry_label));
@@ -190,13 +190,37 @@ impl KoopaTextGenerate for Stmt {
 
                 // body generation
                 append_line(lines, &format!("\n{}:", body_label));
+                scopes.enter_loop(&entry_label, &body_label, &end_label);
                 let mut text_for_body = String::new();
                 body.generate(&mut text_for_body, scopes, tsm, nsc)?;
+                scopes.exit_loop();
                 append_line(lines, &text_for_body);
                 append_line(lines, &format!("  jump {}", entry_label));
 
                 // end label generation
                 append_line(lines, &format!("\n{}:", end_label));
+            }
+            Self::Break => {
+                let Ok(LoopLabel{entry: _, body: _, end: end_label}) = scopes.get_cur_loop_labels() else {
+                    return Err(());
+                };
+                append_line(lines, &format!("  jump {}", end_label));
+
+                // The original basic block is splitted into two halves by the `jump` instruction.
+                // Hence, we need to add a new label here to indicate the start of a new basic block.
+                let new_label = nsc.inc_and_get_named_symbol("%after_break")?;
+                append_line(lines, &format!("\n{}:", new_label));
+            }
+            Self::Continue => {
+                let Ok(LoopLabel{entry: entry_label, body: _, end: _}) = scopes.get_cur_loop_labels() else {
+                    return Err(());
+                };
+                append_line(lines, &format!("  jump {}", entry_label));
+
+                // The original basic block is splitted into two halves by the `jump` instruction.
+                // Hence, we need to add a new label here to indicate the start of a new basic block.
+                let new_label = nsc.inc_and_get_named_symbol("%after_continue")?;
+                append_line(lines, &format!("\n{}:", new_label));
             }
             Self::Return(exp) => {
                 let mut pre = String::new();

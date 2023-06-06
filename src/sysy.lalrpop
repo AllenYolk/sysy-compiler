@@ -54,16 +54,20 @@ Stmt: Stmt = {
 /// OtherStmt ::= LVal "=" Exp ";"
 ///              | [Exp] ";"
 ///              | Block
+///              | "break" ";"
+///              | "continue" ";"
 ///              | "return" [Exp] ";";
 ClosedStmt: Stmt = {
     <lval: LVal> "=" <exp: Exp> ";" => Stmt::Assign(lval, exp),
     <exp: (Exp)?> ";" => Stmt::Exp(exp),
     <block: Block> => Stmt::Block(block),
-    "return" <exp: (Exp)?> ";" => Stmt::Return(exp),
     "if" "(" <cond: Exp> ")" <then: ClosedStmt> "else" <otherwise: ClosedStmt> => {
         Stmt::If(cond, Box::new(then), Some(Box::new(otherwise)))
     },
     "while" "(" <cond: Exp> ")" <body: ClosedStmt> => Stmt::While(cond, Box::new(body)),
+    "break" ";" => Stmt::Break,
+    "continue" ";" => Stmt::Continue,
+    "return" <exp: (Exp)?> ";" => Stmt::Return(exp),
 }
 
 /// OpenStmt ::= "if" "(" Exp ")" Stmt

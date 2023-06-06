@@ -33,6 +33,8 @@ pub enum BlockItem {
 ///        | Block
 ///        | "if" "(" Exp ")" Stmt ["else" Stmt]
 ///        | "while" "(" Exp ")" Stmt
+///        | "break" ";"
+///        | "continue" ";"
 ///        | "return" [Exp] ";"
 #[derive(Debug)]
 pub enum Stmt {
@@ -41,6 +43,8 @@ pub enum Stmt {
     Block(Block),
     If(Exp, Box<Stmt>, Option<Box<Stmt>>),
     While(Exp, Box<Stmt>),
+    Break,
+    Continue,
     Return(Option<Exp>),
 }
 
