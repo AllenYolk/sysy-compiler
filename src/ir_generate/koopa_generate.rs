@@ -171,6 +171,33 @@ impl KoopaTextGenerate for Stmt {
                 // end label generation
                 append_line(lines, &format!("\n{}:", end_label));
             }
+            Self::While(cond, body) => {
+                // prepare the labels
+                let entry_label = nsc.inc_and_get_named_symbol("%while_entry")?;
+                let body_label = nsc.inc_and_get_named_symbol("%while_body")?;
+                let end_label = nsc.inc_and_get_named_symbol("%while_end")?;
+ 
+                // cond generation
+                append_line(lines, &format!("  jump {}", entry_label));
+                append_line(lines, &format!("\n{}:", entry_label));
+                let mut text_for_cond = String::new();
+                let cond_handle = cond.generate(&mut text_for_cond, scopes, tsm, nsc)?;
+                append_line(lines, &text_for_cond);
+                append_line(
+                    lines,
+                    &format!("  br {}, {}, {}", cond_handle, body_label, end_label),
+                );
+
+                // body generation
+                append_line(lines, &format!("\n{}:", body_label));
+                let mut text_for_body = String::new();
+                body.generate(&mut text_for_body, scopes, tsm, nsc)?;
+                append_line(lines, &text_for_body);
+                append_line(lines, &format!("  jump {}", entry_label));
+
+                // end label generation
+                append_line(lines, &format!("\n{}:", end_label));
+            }
             Self::Return(exp) => {
                 let mut pre = String::new();
                 if let Some(expression) = exp {
@@ -181,7 +208,6 @@ impl KoopaTextGenerate for Stmt {
                 }
                 append_line(lines, &pre);
             }
-            _ => (),
         }
 
         Ok(String::new())
