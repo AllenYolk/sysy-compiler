@@ -49,6 +49,7 @@ Stmt: Stmt = {
 }
 
 /// ClosedStmt ::= "if" "(" Exp ")" ClosedStmt "else" ClosedStmt
+///              | "while" "(" Exp ")" ClosedStmt
 ///              | OtherStmt
 /// OtherStmt ::= LVal "=" Exp ";"
 ///              | [Exp] ";"
@@ -62,15 +63,18 @@ ClosedStmt: Stmt = {
     "if" "(" <cond: Exp> ")" <then: ClosedStmt> "else" <otherwise: ClosedStmt> => {
         Stmt::If(cond, Box::new(then), Some(Box::new(otherwise)))
     },
+    "while" "(" <cond: Exp> ")" <body: ClosedStmt> => Stmt::While(cond, Box::new(body)),
 }
 
 /// OpenStmt ::= "if" "(" Exp ")" Stmt
 ///            | "if" "(" Exp ")" ClosedStmt "else" OpenStmt
+///            | "while" "(" Exp ")" OpenStmt
 OpenStmt: Stmt = {
     "if" "(" <cond: Exp> ")" <then: Stmt> => Stmt::If(cond, Box::new(then), None),
     "if" "(" <cond: Exp> ")" <then: ClosedStmt> "else" <otherwise: OpenStmt> => {
         Stmt::If(cond, Box::new(then), Some(Box::new(otherwise)))
     },
+    "while" "(" <cond: Exp> ")" <body: OpenStmt> => Stmt::While(cond, Box::new(body)),
 }
 
 Decl: Decl = {

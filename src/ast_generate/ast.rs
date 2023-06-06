@@ -32,13 +32,15 @@ pub enum BlockItem {
 ///        | [Exp] ";"
 ///        | Block
 ///        | "if" "(" Exp ")" Stmt ["else" Stmt]
-///        | "return" [Exp] ";";
+///        | "while" "(" Exp ")" Stmt
+///        | "return" [Exp] ";"
 #[derive(Debug)]
 pub enum Stmt {
     Assign(LVal, Exp),
     Exp(Option<Exp>),
     Block(Block),
     If(Exp, Box<Stmt>, Option<Box<Stmt>>),
+    While(Exp, Box<Stmt>),
     Return(Option<Exp>),
 }
 
@@ -152,7 +154,7 @@ pub struct LVal {
     pub ident: String,
 }
 
-////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
 // Operators                                                             //
 ///////////////////////////////////////////////////////////////////////////
 
