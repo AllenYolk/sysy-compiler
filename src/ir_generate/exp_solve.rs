@@ -126,6 +126,7 @@ impl ExpSolve for UnaryExp {
                     UnaryExpOp::Not => Ok((v == 0) as i32),
                 }
             }
+            UnaryExp::FuncCall(_, _) => Err(()), // Cannot evaluate the return value of a function during compile time!
         }
     }
 }

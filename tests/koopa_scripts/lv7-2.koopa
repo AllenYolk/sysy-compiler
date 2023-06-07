@@ -52,3 +52,4 @@ fun @main(): i32 {
   %10 = load @x_1
   ret %10
 }
+

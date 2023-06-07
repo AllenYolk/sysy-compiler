@@ -17,15 +17,30 @@ match {
 // Non-terminals                                                                                //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-pub CompUnit: CompUnit = <func_def: FuncDef> => CompUnit { func_def };
+/// CompUnit ::= [CompUnit] FuncDef;
+pub CompUnit: CompUnit = <func_defs: (FuncDef)*> => CompUnit { func_defs };
 
+/// FuncDef ::= FuncType IDENT "(" [FuncFParams] ")" Block;
+/// FuncFParams ::= FuncFParam {"," FuncFParam};
 FuncDef: FuncDef = {
-    <func_type: FuncType> <ident: Ident> "(" ")" <block: Block> => FuncDef { <> }
+    <func_type: FuncType> <ident: Ident> "(" ")" <block: Block> => {
+        FuncDef { func_type, ident, params: Vec::new(), block }
+    },
+    <func_type: FuncType> <ident: Ident> "(" <mut params: (<FuncFParam> ",")*> <param: FuncFParam> ")" <block: Block> => {
+        params.push(param);
+        FuncDef { func_type, ident, params, block }
+    },
 }
 
 FuncType: FuncType = {
     <ft: "int"> => FuncType::Int,
     <ft: "void"> => FuncType::Void,
+}
+
+/// FuncFParam ::= BType IDENT;
+/// BType ::= "int"
+FuncFParam: FuncFParam = {
+    "int" <ident: Ident> => FuncFParam { ident }
 }
 
 // use the `*` macro of `lalrpop`
@@ -152,8 +167,17 @@ MulExp: MulExp = {
     <mul: MulExp> <op: MulExpOp> <unary: UnaryExp> => MulExp::MulUnary(Box::new(mul), op, unary),
 }
 
+/// UnaryExp ::= PrimaryExp
+///            | IDENT "(" [FuncRParams] ")"
+///            | UnaryOp UnaryExp;
+/// FuncRParams ::= Exp {"," Exp};
 UnaryExp: UnaryExp = {
     <primary: PrimaryExp> => UnaryExp::Primary(primary),
+    <ident: Ident> "(" ")" => UnaryExp::FuncCall(ident, Vec::new()),
+    <ident: Ident> "(" <mut params: (<Exp> ",")*> <param: Exp> ")" => {
+        params.push(param);
+        UnaryExp::FuncCall(ident, params)
+    },
     <uop: UnaryExpOp> <uexp: UnaryExp> => UnaryExp::Unary(uop, Box::new(uexp)),
 }
 

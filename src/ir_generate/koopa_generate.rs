@@ -27,7 +27,12 @@ impl KoopaTextGenerate for CompUnit {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        self.func_def.generate(lines, scopes, tsm, nsc)?;
+        for func_def in self.func_defs.iter() {
+            let mut func_text = String::new();
+            func_def.generate(&mut func_text, scopes, tsm, nsc)?;
+            append_line(lines, &func_text);
+            append_line(lines, "\n");
+        }
         Ok(String::new())
     }
 }
@@ -40,13 +45,66 @@ impl KoopaTextGenerate for FuncDef {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        let mut ft_pre = String::new();
-        let ft = self.func_type.generate(&mut ft_pre, scopes, tsm, nsc)?;
-        let mut b = String::new();
-        self.block.generate(&mut b, scopes, tsm, nsc)?;
+        // function return type
+        let mut ft = self
+            .func_type
+            .generate(&mut String::new(), scopes, tsm, nsc)?;
+        if !ft.is_empty() {
+            ft = format!(": {}", ft);
+        }
 
-        let new_text = format!("fun @{}(){} {{\n%entry:\n{}\n}}", self.ident, ft, b,);
-        append_line(lines, &new_text);
+        // function name
+        let func_name = format!("@{}", self.ident);
+        scopes.add_function(&self.ident, &func_name, ft.is_empty())?;
+
+        // function parameters
+        let mut param_text = String::new();
+        let mut func_param_reallocation_text = String::new();
+        for (i, param) in self.params.iter().enumerate() {
+            let formal_param_symbol = tsm.new_temp_symbol();
+            let param_ident = param.generate(&mut String::new(), scopes, tsm, nsc)?;
+            let reallocated_param_symbol =
+                nsc.inc_and_get_named_symbol(&format!("@{}", param_ident))?;
+
+            if i != 0 {
+                param_text.push_str(", ")
+            }
+            param_text.push_str(&format!("{}: i32", formal_param_symbol));
+
+            append_line(
+                &mut func_param_reallocation_text,
+                &format!("  {} = alloc i32", reallocated_param_symbol),
+            );
+            append_line(
+                &mut func_param_reallocation_text,
+                &format!(
+                    "  store {}, {}",
+                    formal_param_symbol, reallocated_param_symbol
+                ),
+            );
+            scopes.add_value_to_buffer(&param_ident, &reallocated_param_symbol, false);
+        }
+
+        // function body
+        let mut body_text = String::new();
+        self.block.generate(&mut body_text, scopes, tsm, nsc)?;
+        // 1. If there's no `ret` instruction in the function body, we only need to add one at the last line.
+        // 2. Only when the return type is `void` can the `ret` instruction be omitted by the original function body.
+        let Some(last_line) = body_text.split("\n").last() else {
+            return Err(());
+        };
+        if !last_line.contains("ret") {
+            append_line(&mut body_text, "  ret");
+        }
+
+        append_line(
+            lines,
+            &format!("fun {}({}){} {{", func_name, param_text, ft),
+        );
+        append_line(lines, "%entry:");
+        append_line(lines, &func_param_reallocation_text);
+        append_line(lines, &body_text);
+        append_line(lines, "}");
 
         Ok(String::new())
     }
@@ -61,9 +119,21 @@ impl KoopaTextGenerate for FuncType {
         _nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self {
-            Self::Int => Ok(String::from(": i32")),
+            Self::Int => Ok(String::from("i32")),
             Self::Void => Ok(String::new()),
         }
+    }
+}
+
+impl KoopaTextGenerate for FuncFParam {
+    fn generate(
+        &self,
+        _lines: &mut String,
+        _scopes: &mut Scopes,
+        _tsm: &mut TempSymbolManager,
+        _nsc: &mut NamedSymbolCounter,
+    ) -> Result<String, ()> {
+        Ok(self.ident.clone())
     }
 }
 
@@ -75,7 +145,7 @@ impl KoopaTextGenerate for Block {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        scopes.enter();
+        scopes.enter()?;
 
         for item in self.items.iter() {
             let mut s = String::new();
@@ -665,6 +735,35 @@ impl KoopaTextGenerate for UnaryExp {
                 let var = pexp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
                 Ok(var)
+            }
+            Self::FuncCall(ident, params) => {
+                let FunctionInfo {
+                    symbol: func_symbol,
+                    return_void,
+                } = scopes.get_function(&ident)?;
+
+                let mut param_text = String::new();
+                for (i, param) in params.iter().enumerate() {
+                    let mut param_generation_text = String::new();
+                    let param_var = param.generate(&mut param_generation_text, scopes, tsm, nsc)?;
+                    append_line(lines, &param_generation_text);
+                    if i > 0 {
+                        param_text.push_str(", ");
+                    }
+                    param_text.push_str(&param_var);
+                }
+
+                if return_void {
+                    append_line(lines, &format!("  call {}({})", func_symbol, param_text));
+                    Ok(String::new())
+                } else {
+                    let result_symbol = tsm.new_temp_symbol();
+                    append_line(
+                        lines,
+                        &format!("  {} = call {}({})", result_symbol, func_symbol, param_text),
+                    );
+                    Ok(result_symbol)
+                }
             }
             Self::Unary(op, uexp) => {
                 let var = uexp.generate(&mut pre, scopes, tsm, nsc)?;

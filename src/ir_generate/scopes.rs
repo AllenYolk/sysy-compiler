@@ -1,11 +1,24 @@
 use std::collections::HashMap;
 
 #[derive(Clone)]
+pub struct FunctionInfo {
+    pub symbol: String,
+    pub return_void: bool,
+}
+
+/// The value of a symbol in the symbol table.
+///
+/// In a symbol table (an element of the `values` field of the struct `Scopes`),
+/// a value identifier (a `String`) is mapped to a symbol, which is an instance of this struct.
+/// A symbol can be either a constant (a `String` indicating its literal value)
+/// or a variable (a `String` representing a Koopa symbol).
+#[derive(Clone)]
 pub enum SymbolTableValue {
     Const(String),
     Var(String),
 }
 
+/// The three labels defined for a `while` loop.
 #[derive(Clone)]
 pub struct LoopLabel {
     pub entry: String,
@@ -15,12 +28,19 @@ pub struct LoopLabel {
 
 #[allow(dead_code)]
 pub struct Scopes {
+    /// All the functions defined in the program.
+    ///
     /// identifier -> koopa symbol name
-    functions: HashMap<String, String>,
-    /// stacked symbol tables
-    /// identifier -> koopa symbol name
+    functions: HashMap<String, FunctionInfo>,
+    /// Stacked symbol tables.
+    ///
+    /// identifier -> koopa symbol name / const value
     values: Vec<HashMap<String, SymbolTableValue>>,
-    /// stacked loop information
+    /// Contents of `values_buffer` will be inserted into the scope entered next time.
+    ///
+    /// This field is used to put function parameters into the symbol table of the function body.
+    values_buffer: Vec<(String, SymbolTableValue)>,
+    /// Stacked loop information.
     loops: Vec<LoopLabel>,
 }
 
@@ -31,27 +51,58 @@ impl Scopes {
         Self {
             functions: HashMap::new(),
             values: vec![HashMap::new()],
+            values_buffer: Vec::new(),
             loops: Vec::new(),
         }
     }
 
-    pub fn get_function(&self, identifier: &str) -> Result<String, ()> {
+    pub fn get_function(&self, identifier: &str) -> Result<FunctionInfo, ()> {
         let Some(res) = self.functions.get(identifier) else {
             return Err(());
         };
         Ok(res.clone())
     }
 
-    pub fn add_function(&mut self, identifier: &str, symbol: &str) -> Result<(), ()> {
-        if let Some(_) = self.functions.insert(identifier.into(), symbol.into()) {
+    pub fn add_function(
+        &mut self,
+        identifier: &str,
+        symbol: &str,
+        return_void: bool,
+    ) -> Result<(), ()> {
+        if let Some(_) = self.functions.insert(
+            identifier.into(),
+            FunctionInfo {
+                symbol: symbol.into(),
+                return_void,
+            },
+        ) {
             return Err(());
         };
         Ok(())
     }
 
+    pub fn add_value_to_buffer(&mut self, identifier: &str, symbol: &str, is_const: bool) {
+        let v = if is_const {
+            SymbolTableValue::Const(symbol.into())
+        } else {
+            SymbolTableValue::Var(symbol.into())
+        };
+        self.values_buffer.push((identifier.into(), v));
+    }
+
     /// Enter a new scope.
-    pub fn enter(&mut self) {
-        self.values.push(HashMap::new());
+    ///
+    /// Contents in `values_buffer` will be added to the new scope.
+    pub fn enter(&mut self) -> Result<(), ()> {
+        let mut map: HashMap<String, SymbolTableValue> = HashMap::new();
+        for (k, v) in self.values_buffer.iter() {
+            if let Some(_) = map.insert(k.clone(), v.clone()) {
+                return Err(());
+            };
+        }
+        self.values.push(map);
+        self.values_buffer.clear();
+        Ok(())
     }
 
     /// Exit the current scopes.

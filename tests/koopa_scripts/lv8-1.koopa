@@ -1,0 +1,51 @@
+fun @half_add(%0: i32, %1: i32): i32 {
+%entry:
+  @x_1 = alloc i32
+  store %0, @x_1
+  @y_1 = alloc i32
+  store %1, @y_1
+  %2 = load @x_1
+  %3 = div %2, 2
+  %4 = load @y_1
+  %5 = add %3, %4
+  ret %5
+}
+
+
+fun @f(%6: i32) {
+%entry:
+  @x_2 = alloc i32
+  store %6, @x_2
+  @y_2 = alloc i32
+  %7 = load @x_2
+  %8 = mod %7, 2
+  store %8, @y_2
+  %9 = load @x_2
+  %10 = gt %9, 0
+  br %10, %if_then_1, %if_else_1
+
+%if_then_1:
+  @z_1 = alloc i32
+  store 5, @z_1
+  jump %if_end_1
+
+%if_else_1:
+  %11 = load @x_2
+  %12 = sub %11, 2
+  call @f(%12)
+  jump %if_end_1
+
+%if_end_1:
+  ret
+}
+
+
+fun @main(): i32 {
+%entry:
+  %13 = mul 5, 2
+  %14 = add 3, %13
+  call @f(%14)
+  %15 = call @half_add(10, 1)
+  ret %15
+}
+

@@ -1,13 +1,16 @@
+/// CompUnit ::= [CompUnit] FuncDef;
 #[derive(Debug)]
 pub struct CompUnit {
-    pub func_def: FuncDef,
+    pub func_defs: Vec<FuncDef>,
 }
 
-/// FuncDef ::= FuncType IDENT "(" ")" Block;
+/// FuncDef ::= FuncType IDENT "(" [FuncFParams] ")" Block;
+/// FuncFParams ::= FuncFParam {"," FuncFParam};
 #[derive(Debug)]
 pub struct FuncDef {
     pub func_type: FuncType,
     pub ident: String,
+    pub params: Vec<FuncFParam>,
     pub block: Block,
 }
 
@@ -15,6 +18,14 @@ pub struct FuncDef {
 pub enum FuncType {
     Int,
     Void,
+}
+
+/// FuncFParam ::= BType IDENT;
+/// BType ::= "int"
+#[derive(Debug)]
+pub struct FuncFParam {
+    // there's only `int` type in SysY!
+    pub ident: String,
 }
 
 #[derive(Debug)]
@@ -35,7 +46,7 @@ pub enum BlockItem {
 ///        | "while" "(" Exp ")" Stmt
 ///        | "break" ";"
 ///        | "continue" ";"
-///        | "return" [Exp] ";"
+///        | "return" [Exp] ";";
 #[derive(Debug)]
 pub enum Stmt {
     Assign(LVal, Exp),
@@ -140,9 +151,14 @@ pub enum MulExp {
     MulUnary(Box<MulExp>, MulExpOp, UnaryExp),
 }
 
+/// UnaryExp ::= PrimaryExp
+///            | IDENT "(" [FuncRParams] ")"
+///            | UnaryOp UnaryExp;
+/// FuncRParams ::= Exp {"," Exp};
 #[derive(Debug)]
 pub enum UnaryExp {
     Primary(PrimaryExp),
+    FuncCall(String, Vec<Exp>),
     Unary(UnaryExpOp, Box<UnaryExp>),
 }
 
