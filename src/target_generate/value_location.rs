@@ -10,6 +10,11 @@ pub enum ValueLocation {
     Reg(String),
     /// Located on the stack frame.
     Stack(String),
+    /// A placeholder.
+    /// 
+    /// Used in the implementation of `FunctionData.generate(...)`, 
+    /// in order to put the value location (returned by `cxt.get_value_location(Value)`) at a correct place.
+    PlaceHolder(String),
     None,
 }
 
@@ -26,7 +31,7 @@ impl ValueLocation {
             Self::Stack(addr) => {
                 format!("  lw {}, {}", reg, addr)
             }
-            Self::None => String::new(),
+            _ => String::new(),
         }
     }
 }

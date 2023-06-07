@@ -1,5 +1,6 @@
 use super::context::*;
 use super::value_location::*;
+use super::function_scan::*;
 use crate::tools::*;
 use koopa::ir::entities::*;
 use koopa::ir::*;
@@ -19,7 +20,7 @@ impl RiscvGenerate for Program {
     type Ret = ();
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
-        // global values
+        // global variables
         let mut first_time = true;
         for &val in self.inst_layout() {
             let val_data = self.borrow_value(val);
@@ -32,25 +33,22 @@ impl RiscvGenerate for Program {
             }
         }
 
-        // function names
-        first_time = true;
-        for &func in self.func_layout() {
-            let func_name = &self.func(func).name()[1..];
-            if first_time {
-                append_line(lines, "  .text");
-                first_time = false;
-            }
-            append_line(lines, &format!("  .globl {}", func_name));
-        }
-
         // function definitions
         for &func in self.func_layout() {
-            cxt.func = Some(func);
-            cxt.reset_offset();
+            // First, scan the function in order to get some information.
+            // 1. The addresses of the temporary variables.
+            // 2. The size of the stack frame.
+            // 3. The address of the return address slot.
+            // Store the information in `cxt.func`.
             let func_data = self.func(func);
+            cxt.func = Some(FunctionScanResult::try_from(func, func_data)?);
+            
+            // Then, generate the instructions in the function body.
             let mut new_lines = String::new();
             func_data.generate(&mut new_lines, cxt)?;
+
             append_line(lines, &new_lines);
+            append_line(lines, " ");
         }
 
         Ok(())
@@ -61,8 +59,10 @@ impl RiscvGenerate for FunctionData {
     type Ret = ();
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
-        let mut name_lines = String::new();
         let func_name = &self.name()[1..];
+        let mut name_lines = String::new();
+        append_line(&mut name_lines, "  .text");
+        append_line(&mut name_lines, &format!("  .globl {}", func_name));
         append_line(&mut name_lines, &format!("{}:", func_name));
 
         let mut body_lines = String::new();
@@ -84,13 +84,24 @@ impl RiscvGenerate for FunctionData {
                 let inst_val_data = self.dfg().value(inst_val); // an Koopa instruction
                 let mut new_lines = String::new();
                 let loc = inst_val_data.generate(&mut new_lines, cxt)?; // the location of the instruction's left-hand side
-                append_line(&mut body_lines, &new_lines);
+
                 match loc {
-                    ValueLocation::None => (),
-                    _ => {
-                        cxt.set_value_location(inst_val, loc);
-                    }
+                    ValueLocation::PlaceHolder(p) => {
+                        let Some(real_loc) = cxt.get_value_location(inst_val) else{
+                            return Err(());
+                        };
+                        let real_loc_str = match real_loc {
+                            ValueLocation::Imm(s) => s,
+                            ValueLocation::Reg(s) => s,
+                            ValueLocation::Stack(s) => s,
+                            _ => return Err(()),
+                        };
+                        new_lines = new_lines.replace(&p, &real_loc_str);
+                    },
+                    _ => (),
                 }
+
+                append_line(&mut body_lines, &new_lines);
             }
         }
 
@@ -98,7 +109,10 @@ impl RiscvGenerate for FunctionData {
         append_line(lines, &name_lines);
         let mut pro = String::from("  # no prologue");
         let mut epi = String::from("  # no epilogue");
-        let sp_shift = ceil_to_k(cxt.total_offset(), 16usize);
+        let Some(ref func_info) = cxt.func else {
+            return Err(());
+        };
+        let sp_shift = ceil_to_k(func_info.stack_frame_size, 16usize);
         if sp_shift > 0 {
             pro = format!("  addi sp, sp, -{}", sp_shift);
             epi = format!("  addi sp, sp, {}", sp_shift);
@@ -172,9 +186,8 @@ impl RiscvGenerate for values::Integer {
 impl RiscvGenerate for values::Alloc {
     type Ret = ValueLocation;
 
-    fn generate(&self, _lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
-        let offset = cxt.alloc_local_stack_variable(4);
-        Ok(ValueLocation::Stack(format!("{}(sp)", offset)))
+    fn generate(&self, _lines: &mut String, _cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        Ok(ValueLocation::None)
     }
 }
 
@@ -184,10 +197,9 @@ impl RiscvGenerate for values::Load {
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let src = self.src().generate(&mut String::new(), cxt)?;
         append_line(lines, &src.move_to_reg("t0"));
-        let offset = cxt.alloc_local_stack_variable(4);
-        append_line(lines, &format!("  sw t0, {}(sp)", offset));
+        append_line(lines, "  sw t0, <tar>");
 
-        Ok(ValueLocation::Stack(format!("{}(sp)", offset)))
+        Ok(ValueLocation::PlaceHolder("<tar>".to_string()))
     }
 }
 
@@ -255,10 +267,9 @@ impl RiscvGenerate for values::Binary {
                 append_line(lines, &format!("  {} t0, t0, t1", verb));
             }
         };
-        let offset = cxt.alloc_local_stack_variable(4);
-        append_line(lines, &format!("  sw t0, {}(sp)", offset));
+        append_line(lines, "  sw t0, <tar>");
 
-        Ok(ValueLocation::Stack(format!("{}(sp)", offset)))
+        Ok(ValueLocation::PlaceHolder("<tar>".to_string()))
     }
 }
 
@@ -328,7 +339,7 @@ impl RiscvGenerate for values::Return {
             let loc = ret_val.generate(&mut String::new(), cxt)?;
             append_line(lines, &loc.move_to_reg("a0"));
         }
-        append_line(lines, "<epilogue>");
+        append_line(lines, "<epilogue>"); // a place holder, which will be replaced by the epilogue in `FunctionData.generate`.
         append_line(lines, "  ret");
 
         Ok(ValueLocation::None)

@@ -31,7 +31,7 @@ impl KoopaTextGenerate for CompUnit {
             let mut func_text = String::new();
             func_def.generate(&mut func_text, scopes, tsm, nsc)?;
             append_line(lines, &func_text);
-            append_line(lines, "\n");
+            append_line(lines, " ");
         }
         Ok(String::new())
     }

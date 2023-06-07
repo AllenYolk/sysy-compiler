@@ -1,6 +1,7 @@
 mod context;
 mod riscv_generate;
 mod value_location;
+mod function_scan;
 
 use context::ProgramContext;
 use koopa::ir::*;

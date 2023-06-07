@@ -21,3 +21,4 @@ entry:
   sw t0, 16(sp)
   addi sp, sp, 32
   ret
+ 
