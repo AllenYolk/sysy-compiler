@@ -1,6 +1,6 @@
 use super::context::*;
-use super::value_location::*;
 use super::function_scan::*;
+use super::value_location::*;
 use crate::tools::*;
 use koopa::ir::entities::*;
 use koopa::ir::*;
@@ -42,7 +42,7 @@ impl RiscvGenerate for Program {
             // Store the information in `cxt.func`.
             let func_data = self.func(func);
             cxt.func = Some(FunctionScanResult::try_from(func, func_data)?);
-            
+
             // Then, generate the instructions in the function body.
             let mut new_lines = String::new();
             func_data.generate(&mut new_lines, cxt)?;
@@ -97,7 +97,7 @@ impl RiscvGenerate for FunctionData {
                             _ => return Err(()),
                         };
                         new_lines = new_lines.replace(&p, &real_loc_str);
-                    },
+                    }
                     _ => (),
                 }
 
@@ -107,15 +107,33 @@ impl RiscvGenerate for FunctionData {
 
         // add prologue and epilogue
         append_line(lines, &name_lines);
-        let mut pro = String::from("  # no prologue");
-        let mut epi = String::from("  # no epilogue");
         let Some(ref func_info) = cxt.func else {
             return Err(());
         };
-        let sp_shift = ceil_to_k(func_info.stack_frame_size, 16usize);
+        let sp_shift = func_info.stack_frame_size;
+
+        let mut pro = String::new();
+        let mut epi = String::new();
         if sp_shift > 0 {
-            pro = format!("  addi sp, sp, -{}", sp_shift);
-            epi = format!("  addi sp, sp, {}", sp_shift);
+            append_line(&mut pro, &format!("  addi sp, sp, -{}", sp_shift));
+        }
+        if let Some(ref ra_loc) = func_info.ra_slot_location {
+            // there's a `call` in the function body, and we need to save the `ra` register
+            if let ValueLocation::Stack(ref ra_addr) = ra_loc {
+                append_line(&mut pro, &format!("  sw ra, {}", ra_addr));
+                append_line(&mut epi, &format!("  lw ra, {}", ra_addr));
+            } else {
+                return Err(());
+            }
+        }
+        if sp_shift > 0 {
+            append_line(&mut epi, &format!("  addi sp, sp, {}", sp_shift));
+        }
+        if pro.is_empty() {
+            pro = "  # no prologue".to_string();
+        }
+        if epi.is_empty() {
+            epi = "  # no epilogue".to_string();
         }
         append_line(lines, &pro);
         body_lines = body_lines.replace("<epilogue>", &epi);
@@ -130,11 +148,12 @@ impl RiscvGenerate for Value {
 
     /// Find the location of the `Value`.
     ///
-    /// Search in the HashMap `cxt.value_locations`.
+    /// Search in the HashMap `cxt.value_locations` by calling `cxt.get_value_location(..)`.
     fn generate(&self, _lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let Some(value_data) = cxt.get_value_data(*self) else {
             return Err(());
         };
+
         match value_data.kind() {
             ValueKind::Integer(val) => Ok(ValueLocation::Imm(format!("{}", val.value()))),
             _ => {
@@ -167,6 +186,8 @@ impl RiscvGenerate for ValueData {
             ValueKind::Branch(val) => val.generate(lines, cxt),
             // jump operation
             ValueKind::Jump(val) => val.generate(lines, cxt),
+            // function call
+            ValueKind::Call(val) => val.generate(lines, cxt),
             // function return
             ValueKind::Return(val) => val.generate(lines, cxt),
             // others
@@ -208,11 +229,9 @@ impl RiscvGenerate for values::Store {
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let val = self.value().generate(&mut String::new(), cxt)?;
-        append_line(lines, &val.move_to_reg("t0"));
-
         let dest = self.dest().generate(&mut String::new(), cxt)?;
-        if let ValueLocation::Stack(dest_loc) = dest {
-            append_line(lines, &format!("  sw t0, {}", dest_loc));
+        if let ValueLocation::Stack(_) = dest {
+            append_line(lines, &val.move_to(dest.clone()));
         } else {
             return Err(());
         }
@@ -328,6 +347,41 @@ impl RiscvGenerate for values::Jump {
         );
 
         Ok(ValueLocation::None)
+    }
+}
+
+impl RiscvGenerate for values::Call {
+    type Ret = ValueLocation;
+
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        // Since all the temporary variables are stored on the stack frame,
+        // we don't need to save the caller-saved registers!!!
+        // Nice!
+
+        // Prepare the arguments.
+        let args = self.args();
+        let Some(stack_frame_size) = cxt.get_current_stack_frame_size() else {
+            return Err(());
+        };
+        for (i, arg) in args.iter().enumerate() {
+            let loc = arg.generate(&mut String::new(), cxt)?;
+            append_line(lines, &loc.act_as_function_arg(i, stack_frame_size));
+        }
+
+        // Call the function.
+        let callee = self.callee();
+        let callee_data = cxt.get_function_data(callee);
+        append_line(lines, &format!("  call {}", &callee_data.name()[1..]));
+
+        // Get the return value.
+        if format!("{:?}", callee_data.ty()) == "()".to_string() {
+            println!("unit return!");
+            Ok(ValueLocation::None)
+        } else {
+            println!("i32 return!");
+            append_line(lines, "  sw a0, <tar>");
+            Ok(ValueLocation::PlaceHolder("<tar>".to_string()))
+        }
     }
 }
 

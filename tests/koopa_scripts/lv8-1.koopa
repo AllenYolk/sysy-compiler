@@ -11,7 +11,7 @@ fun @half_add(%0: i32, %1: i32): i32 {
   ret %5
 }
  
-fun @f(%6: i32) {
+fun @ff(%6: i32) {
 %entry:
   @x_2 = alloc i32
   store %6, @x_2
@@ -31,19 +31,66 @@ fun @f(%6: i32) {
 %if_else_1:
   %11 = load @x_2
   %12 = sub %11, 2
-  call @f(%12)
+  call @ff(%12)
   jump %if_end_1
 
 %if_end_1:
   ret
 }
  
+fun @gg(%13: i32, %14: i32, %15: i32, %16: i32, %17: i32, %18: i32, %19: i32, %20: i32, %21: i32, %22: i32): i32 {
+%entry:
+  @a_1 = alloc i32
+  store %13, @a_1
+  @b_1 = alloc i32
+  store %14, @b_1
+  @c_1 = alloc i32
+  store %15, @c_1
+  @d_1 = alloc i32
+  store %16, @d_1
+  @e_1 = alloc i32
+  store %17, @e_1
+  @f_1 = alloc i32
+  store %18, @f_1
+  @g_1 = alloc i32
+  store %19, @g_1
+  @h_1 = alloc i32
+  store %20, @h_1
+  @i_1 = alloc i32
+  store %21, @i_1
+  @j_1 = alloc i32
+  store %22, @j_1
+  @xx_1 = alloc i32
+  %23 = load @a_1
+  %24 = load @b_1
+  %25 = add %23, %24
+  %26 = load @c_1
+  %27 = add %25, %26
+  %28 = load @d_1
+  %29 = add %27, %28
+  %30 = load @e_1
+  %31 = add %29, %30
+  %32 = load @f_1
+  %33 = add %31, %32
+  %34 = load @g_1
+  %35 = add %33, %34
+  %36 = load @h_1
+  %37 = add %35, %36
+  %38 = load @i_1
+  %39 = add %37, %38
+  %40 = load @j_1
+  %41 = add %39, %40
+  store %41, @xx_1
+  %42 = load @xx_1
+  ret %42
+}
+ 
 fun @main(): i32 {
 %entry:
-  %13 = mul 5, 2
-  %14 = add 3, %13
-  call @f(%14)
-  %15 = call @half_add(10, 1)
-  ret %15
+  %43 = mul 5, 2
+  %44 = add 3, %43
+  call @ff(%44)
+  %45 = call @half_add(10, 1)
+  ret %45
 }
  

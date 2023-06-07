@@ -4,3 +4,4 @@ fun @main(): i32 {
   %1 = add 1, %0
   ret %1
 }
+ 

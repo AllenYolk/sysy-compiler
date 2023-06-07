@@ -10,3 +10,4 @@ fun @main() {
   %2 = sub %1, 1
   ret
 }
+ 

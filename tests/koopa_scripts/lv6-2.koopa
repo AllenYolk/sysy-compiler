@@ -64,3 +64,4 @@ fun @main(): i32 {
   %19 = load @a_1
   ret %19
 }
+ 

@@ -1,25 +1,28 @@
+use crate::tools::ceil_to_k;
 use koopa::ir::entities::*;
 use koopa::ir::*;
 use std::collections::HashMap;
+
+use super::function_call::function_arg_location;
 use super::value_location::*;
 
 /// The result of function scanning.
 pub struct FunctionScanResult {
     /// The handle of the function.
-    /// 
+    ///
     /// Notice that `Function` has implemented the `Copy` trait!
     pub func: Function,
     /// The locations of the values in the function.
-    /// 
+    ///
     /// During scanning, the addresses of all the variables are decided.
     /// Notice that `Value` has implemented the `Copy` trait!
     pub value_locations: HashMap<Value, ValueLocation>,
     /// The size of the stack frame.
-    /// 
-    /// This value has not be ceiled up to 16 bytes.
+    ///
+    /// This value has been ceiled up to 16 bytes.
     pub stack_frame_size: usize,
     /// The location of the return address slot.
-    /// 
+    ///
     /// `None` if the function does not call other functions.
     pub ra_slot_location: Option<ValueLocation>,
 }
@@ -31,24 +34,49 @@ impl FunctionScanResult {
         let mut n_param_on_stack = 0usize;
         let mut has_call = false;
         let mut value_slots = HashMap::new();
-        func_data.scan(&mut value_slots, &mut n_local_var, &mut n_param_on_stack, &mut has_call)?;
+        func_data.scan(
+            &mut value_slots,
+            &mut n_local_var,
+            &mut n_param_on_stack,
+            &mut has_call,
+        )?;
 
-        let stack_frame_size = (n_param_on_stack + n_local_var + (has_call as usize)) * 4;
+        let stack_frame_size = ceil_to_k(
+            (n_param_on_stack + n_local_var + (has_call as usize)) * 4,
+            16usize,
+        );
         let mut ra_slot_location = None;
         if has_call {
-            ra_slot_location = Some(ValueLocation::Stack(format!("{}(sp)", stack_frame_size - 4)));
+            ra_slot_location = Some(ValueLocation::Stack(format!(
+                "{}(sp)",
+                stack_frame_size - 4
+            )));
         }
-        let value_locations: HashMap<Value, ValueLocation> = value_slots.into_iter().map(|(k, v)| {
-            let loc = 4 * (v + n_param_on_stack);
-            (k, ValueLocation::Stack(format!("{}(sp)", loc)))
-        }).collect();
-        
-        Ok(Self { func, value_locations, stack_frame_size, ra_slot_location })
+        let mut value_locations: HashMap<Value, ValueLocation> = value_slots
+            .into_iter()
+            .map(|(k, v)| {
+                let loc = 4 * (v + n_param_on_stack);
+                (k, ValueLocation::Stack(format!("{}(sp)", loc)))
+            })
+            .collect();
+        // we have to add the function parameters to the `value_locations` map
+        for (i, param) in func_data.params().iter().enumerate() {
+            value_locations.insert(*param, function_arg_location(i, stack_frame_size));
+        }
+
+        println!("{} -> {}", func_data.name(), n_param_on_stack);
+
+        Ok(Self {
+            func,
+            value_locations,
+            stack_frame_size,
+            ra_slot_location,
+        })
     }
 }
 
 /// Scan the function and update some fields.
-/// 
+///
 /// The implementation should update the following fields:
 /// * `value_slots`: the slot id (order number) of each value. This field should be updated by `FunctionData`'s implementation only!
 /// * `n_local_var`: the number of local variables.
@@ -57,17 +85,30 @@ impl FunctionScanResult {
 trait FunctionScan {
     type Ret;
 
-    fn scan(&self, value_slots: &mut HashMap<Value, usize>, n_local_var: &mut usize, n_param_on_stack: &mut usize, has_call: &mut bool) -> Result<Self::Ret, ()>;
+    fn scan(
+        &self,
+        value_slots: &mut HashMap<Value, usize>,
+        n_local_var: &mut usize,
+        n_param_on_stack: &mut usize,
+        has_call: &mut bool,
+    ) -> Result<Self::Ret, ()>;
 }
 
 impl FunctionScan for FunctionData {
     type Ret = ();
 
-    fn scan(&self, value_slots: &mut HashMap<Value, usize>, n_local_var: &mut usize, n_param_on_stack: &mut usize, has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        value_slots: &mut HashMap<Value, usize>,
+        n_local_var: &mut usize,
+        n_param_on_stack: &mut usize,
+        has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         for (_bb, node) in self.layout().bbs() {
             for &inst_val in node.insts().keys() {
                 let inst_val_data = self.dfg().value(inst_val);
-                let loc = inst_val_data.scan(value_slots, n_local_var, n_param_on_stack, has_call)?;
+                let loc =
+                    inst_val_data.scan(value_slots, n_local_var, n_param_on_stack, has_call)?;
                 match loc {
                     Some(o) => {
                         value_slots.insert(inst_val, o);
@@ -84,10 +125,18 @@ impl FunctionScan for FunctionData {
 impl FunctionScan for ValueData {
     type Ret = Option<usize>;
 
-    fn scan(&self, value_slots: &mut HashMap<Value, usize>, n_local_var: &mut usize, n_param_on_stack: &mut usize, has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        value_slots: &mut HashMap<Value, usize>,
+        n_local_var: &mut usize,
+        n_param_on_stack: &mut usize,
+        has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         match self.kind() {
             // integer constant
-            ValueKind::Integer(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call),
+            ValueKind::Integer(val) => {
+                val.scan(value_slots, n_local_var, n_param_on_stack, has_call)
+            }
             // allocation operation
             ValueKind::Alloc(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call),
             // load operation
@@ -95,13 +144,21 @@ impl FunctionScan for ValueData {
             // store operation
             ValueKind::Store(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call),
             // binary operation
-            ValueKind::Binary(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call),
+            ValueKind::Binary(val) => {
+                val.scan(value_slots, n_local_var, n_param_on_stack, has_call)
+            }
             // branch operation
-            ValueKind::Branch(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call),
+            ValueKind::Branch(val) => {
+                val.scan(value_slots, n_local_var, n_param_on_stack, has_call)
+            }
             // jump operation
             ValueKind::Jump(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call),
+            // function call
+            ValueKind::Call(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call),
             // function return
-            ValueKind::Return(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call),
+            ValueKind::Return(val) => {
+                val.scan(value_slots, n_local_var, n_param_on_stack, has_call)
+            }
             // others
             _ => Err(()),
         }
@@ -111,7 +168,13 @@ impl FunctionScan for ValueData {
 impl FunctionScan for values::Integer {
     type Ret = Option<usize>;
 
-    fn scan(&self, _value_slots: &mut HashMap<Value, usize>, _n_local_var: &mut usize, _n_param_on_stack: &mut usize, _has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        _n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         Ok(None)
     }
 }
@@ -119,7 +182,13 @@ impl FunctionScan for values::Integer {
 impl FunctionScan for values::Alloc {
     type Ret = Option<usize>;
 
-    fn scan(&self, _value_slots: &mut HashMap<Value, usize>, n_local_var: &mut usize, _n_param_on_stack: &mut usize, _has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         *n_local_var += 1;
         Ok(Some(*n_local_var - 1))
     }
@@ -128,7 +197,13 @@ impl FunctionScan for values::Alloc {
 impl FunctionScan for values::Load {
     type Ret = Option<usize>;
 
-    fn scan(&self, _value_slots: &mut HashMap<Value, usize>, n_local_var: &mut usize, _n_param_on_stack: &mut usize, _has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         *n_local_var += 1;
         Ok(Some(*n_local_var - 1))
     }
@@ -137,7 +212,13 @@ impl FunctionScan for values::Load {
 impl FunctionScan for values::Store {
     type Ret = Option<usize>;
 
-    fn scan(&self, _value_slots: &mut HashMap<Value, usize>, _n_local_var: &mut usize, _n_param_on_stack: &mut usize, _has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        _n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         Ok(None)
     }
 }
@@ -145,7 +226,13 @@ impl FunctionScan for values::Store {
 impl FunctionScan for values::Binary {
     type Ret = Option<usize>;
 
-    fn scan(&self, _value_slots: &mut HashMap<Value, usize>, n_local_var: &mut usize, _n_param_on_stack: &mut usize, _has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         *n_local_var += 1;
         Ok(Some(*n_local_var - 1))
     }
@@ -154,7 +241,13 @@ impl FunctionScan for values::Binary {
 impl FunctionScan for values::Branch {
     type Ret = Option<usize>;
 
-    fn scan(&self, _value_slots: &mut HashMap<Value, usize>, _n_local_var: &mut usize, _n_param_on_stack: &mut usize, _has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        _n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         Ok(None)
     }
 }
@@ -162,15 +255,49 @@ impl FunctionScan for values::Branch {
 impl FunctionScan for values::Jump {
     type Ret = Option<usize>;
 
-    fn scan(&self, _value_slots: &mut HashMap<Value, usize>, _n_local_var: &mut usize, _n_param_on_stack: &mut usize, _has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        _n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         Ok(None)
+    }
+}
+
+impl FunctionScan for values::Call {
+    type Ret = Option<usize>;
+
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        n_local_var: &mut usize,
+        n_param_on_stack: &mut usize,
+        has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
+        *has_call = *has_call || true;
+
+        let n_args = self.args().len();
+        let on_stack = n_args.checked_sub(8).unwrap_or(0);
+        *n_param_on_stack = std::cmp::max(*n_param_on_stack, on_stack);
+
+        // Whether the function returns a value or not, we allocate a slot for the return value.
+        *n_local_var += 1;
+        Ok(Some(*n_local_var - 1))
     }
 }
 
 impl FunctionScan for values::Return {
     type Ret = Option<usize>;
 
-    fn scan(&self, _value_slots: &mut HashMap<Value, usize>, _n_local_var: &mut usize, _n_param_on_stack: &mut usize, _has_call: &mut bool) -> Result<Self::Ret, ()> {
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        _n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+    ) -> Result<Self::Ret, ()> {
         Ok(None)
     }
 }

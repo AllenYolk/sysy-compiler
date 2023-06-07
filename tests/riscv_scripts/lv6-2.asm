@@ -118,3 +118,4 @@ and_end_1:
   lw t0, 96(sp)
   sw t0, 44(sp)
   j or_end_2
+ 

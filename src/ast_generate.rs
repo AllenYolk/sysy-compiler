@@ -98,6 +98,11 @@ mod tests {
     }
 
     #[test]
+    fn astgen_lv8_0_test() {
+        astgen_test("tests/sysy_scripts/lv8-0.c");
+    }
+
+    #[test]
     fn astgen_lv8_1_test() {
         astgen_test("tests/sysy_scripts/lv8-1.c");
     }

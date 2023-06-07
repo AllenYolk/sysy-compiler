@@ -1,6 +1,6 @@
 use super::function_scan::*;
-use koopa::ir::entities::*;
 use super::value_location::*;
+use koopa::ir::entities::*;
 
 /// Context information used during RISC-V assembly generation.
 pub struct ProgramContext<'a> {
@@ -26,6 +26,17 @@ impl<'a> ProgramContext<'a> {
             return None;
         };
         Some(self.program.func(cur_func))
+    }
+
+    pub fn get_function_data(&self, func: Function) -> &FunctionData {
+        self.program.func(func)
+    }
+
+    pub fn get_current_stack_frame_size(&self) -> Option<usize> {
+        let Some(FunctionScanResult{stack_frame_size, .. }) = self.func else {
+            return None;
+        };
+        Some(stack_frame_size)
     }
 
     /// Given a `Value` handler, return the corresponding `ValueData` in the current program context.
