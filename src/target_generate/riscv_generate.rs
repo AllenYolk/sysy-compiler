@@ -29,7 +29,7 @@ impl RiscvGenerate for Program {
 
             let mut initialization_line = String::new();
             // call `generate` on `GlobalAlloc` to generate the initialization line
-            val_data.generate(&mut initialization_line, cxt)?; 
+            val_data.generate(&mut initialization_line, cxt)?;
 
             append_line(lines, &format!("  .data"));
             append_line(lines, &format!("  .globl {}", &val_name[1..]));
@@ -195,11 +195,12 @@ impl RiscvGenerate for ValueData {
                 let ret = val.generate(&mut initialization_line, cxt);
                 if initialization_line.contains("<type_size>") {
                     let type_size = self.ty().size();
-                    initialization_line = initialization_line.replace("<type_size>", &type_size.to_string());
+                    initialization_line =
+                        initialization_line.replace("<type_size>", &type_size.to_string());
                 };
                 append_line(lines, &initialization_line);
                 ret
-            },
+            }
             // allocation operation
             ValueKind::Alloc(val) => val.generate(lines, cxt),
             // global value allocation
@@ -259,7 +260,7 @@ impl RiscvGenerate for values::GlobalAlloc {
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let initializer = self.init();
         let initializer_data = cxt.program.borrow_value(initializer);
-        
+
         initializer_data.generate(lines, cxt)
     }
 }
@@ -286,7 +287,7 @@ impl RiscvGenerate for values::Store {
         match dest {
             ValueLocation::Stack(_) | ValueLocation::Global(_) => {
                 append_line(lines, &val.move_to(dest.clone()));
-            },
+            }
             _ => {
                 return Err(());
             }

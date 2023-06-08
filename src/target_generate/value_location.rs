@@ -73,7 +73,10 @@ impl ValueLocation {
                 format!("  la t0, {}\n  lw t1, {}\n  sw t1, 0(t0)", name, addr)
             }
             Self::Global(s) => {
-                format!("  la t0, {}\n  lw t0, 0(t0)\n  la t1, {}\n  sw t0, 0(t1)", s, name)
+                format!(
+                    "  la t0, {}\n  lw t0, 0(t0)\n  la t1, {}\n  sw t0, 0(t1)",
+                    s, name
+                )
             }
             _ => String::new(),
         }
@@ -111,6 +114,11 @@ mod tests {
             "  li t0, 1\n  sw t0, 0(sp)"
         );
         assert_eq!(
+            ValueLocation::Imm("1".into()).move_to(ValueLocation::Global("a".into())),
+            "  li t0, 1\n  la t1, a\n  sw t0, 0(t1)"
+        );
+
+        assert_eq!(
             ValueLocation::Reg("a0".into()).move_to(ValueLocation::Reg("a1".into())),
             "  mv a1, a0"
         );
@@ -118,6 +126,11 @@ mod tests {
             ValueLocation::Reg("a0".into()).move_to(ValueLocation::Stack("0(sp)".into())),
             "  sw a0, 0(sp)"
         );
+        assert_eq!(
+            ValueLocation::Reg("a0".into()).move_to(ValueLocation::Global("a".into())),
+            "  la t0, a\n  sw a0, 0(t0)"
+        );
+
         assert_eq!(
             ValueLocation::Stack("0(sp)".into()).move_to(ValueLocation::Reg("a0".into())),
             "  lw a0, 0(sp)"
@@ -127,13 +140,22 @@ mod tests {
             "  lw t0, 0(sp)\n  sw t0, 4(sp)"
         );
         assert_eq!(
+            ValueLocation::Stack("0(sp)".into()).move_to(ValueLocation::Global("a".into())),
+            "  la t0, a\n  lw t1, 0(sp)\n  sw t1, 0(t0)"
+        );
+
+        assert_eq!(
             ValueLocation::Global("a".into()).move_to(ValueLocation::Reg("a0".into())),
-            "  la a0, a"
+            "  la t0, a\n  lw a0, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).move_to(ValueLocation::Stack("0(sp)".into())),
-            "  la t0, a\n  sw t0, 0(sp)"
+            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 0(sp)"
         );
+        assert_eq!(
+            ValueLocation::Global("a".into()).move_to(ValueLocation::Global("b".into())),
+            "  la t0, a\n  lw t0, 0(t0)\n  la t1, b\n  sw t0, 0(t1)"
+        )
     }
 
     #[test]
@@ -275,47 +297,47 @@ mod tests {
 
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(0, 16),
-            "  la a0, a"
+            "  la t0, a\n  lw a0, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(1, 16),
-            "  la a1, a"
+            "  la t0, a\n  lw a1, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(2, 16),
-            "  la a2, a"
+            "  la t0, a\n  lw a2, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(3, 16),
-            "  la a3, a"
+            "  la t0, a\n  lw a3, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(4, 16),
-            "  la a4, a"
+            "  la t0, a\n  lw a4, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(5, 16),
-            "  la a5, a"
+            "  la t0, a\n  lw a5, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(6, 16),
-            "  la a6, a"
+            "  la t0, a\n  lw a6, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(7, 16),
-            "  la a7, a"
+            "  la t0, a\n  lw a7, 0(t0)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(8, 16),
-            "  la t0, a\n  sw t0, 16(sp)"
+            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 16(sp)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(9, 16),
-            "  la t0, a\n  sw t0, 20(sp)"
+            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 20(sp)"
         );
         assert_eq!(
             ValueLocation::Global("a".into()).act_as_function_arg(10, 16),
-            "  la t0, a\n  sw t0, 24(sp)"
+            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 24(sp)"
         );
     }
 }

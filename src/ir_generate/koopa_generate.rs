@@ -361,12 +361,15 @@ impl KoopaTextGenerate for GlobalDecl {
                             let InitVal::Exp(exp) = init;
                             exp.solve(scopes)?.to_string()
                         }
-                        None => "zeroinit".to_string()
+                        None => "zeroinit".to_string(),
                     };
-                    append_line(lines, &format!("global {} = alloc i32, {}", symbol_name, init));
+                    append_line(
+                        lines,
+                        &format!("global {} = alloc i32, {}", symbol_name, init),
+                    );
                 }
                 Ok(String::new())
-            },
+            }
         }
     }
 }
