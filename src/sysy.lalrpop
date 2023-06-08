@@ -17,24 +17,36 @@ match {
 // Non-terminals                                                                                //
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
-/// CompUnit ::= [CompUnit] FuncDef;
-pub CompUnit: CompUnit = <func_defs: (FuncDef)*> => CompUnit { func_defs };
+/// CompUnit ::= [CompUnit] (Decl | FuncDef);
+pub CompUnit: CompUnit = <items: (CompUnitItem)*> => CompUnit { items };
+
+CompUnitItem: CompUnitItem = {
+    <decl: Decl> => CompUnitItem::GlobalDecl(GlobalDecl{ decl }),
+    <func_def: FuncDef> => CompUnitItem::FuncDef(func_def),
+}
 
 /// FuncDef ::= FuncType IDENT "(" [FuncFParams] ")" Block;
 /// FuncFParams ::= FuncFParam {"," FuncFParam};
+/// 
+/// Notice that we cannot define an extra `FuncType` non-terminal, because it will cause ambiguity.
+/// e.g.  Now we have `int` at the top of the stack, and an `ident` to come.
+///       We may reduce `int` to `FuncType`, or put `ident` into the stack to match a `VarDecl`.
+///       In that case, the grammar is no longer LR(1)!!!
 FuncDef: FuncDef = {
-    <func_type: FuncType> <ident: Ident> "(" ")" <block: Block> => {
-        FuncDef { func_type, ident, params: Vec::new(), block }
+    "int" <ident: Ident> "(" ")" <block: Block> => {
+        FuncDef { func_type: FuncType::Int, ident, params: Vec::new(), block }
     },
-    <func_type: FuncType> <ident: Ident> "(" <mut params: (<FuncFParam> ",")*> <param: FuncFParam> ")" <block: Block> => {
+    "void" <ident: Ident> "(" ")" <block: Block> => {
+        FuncDef { func_type: FuncType::Void, ident, params: Vec::new(), block }
+    },
+    "int" <ident: Ident> "(" <mut params: (<FuncFParam> ",")*> <param: FuncFParam> ")" <block: Block> => {
         params.push(param);
-        FuncDef { func_type, ident, params, block }
+        FuncDef { func_type: FuncType::Int, ident, params, block }
     },
-}
-
-FuncType: FuncType = {
-    <ft: "int"> => FuncType::Int,
-    <ft: "void"> => FuncType::Void,
+    "void" <ident: Ident> "(" <mut params: (<FuncFParam> ",")*> <param: FuncFParam> ")" <block: Block> => {
+        params.push(param);
+        FuncDef { func_type: FuncType::Void, ident, params, block }
+    },
 }
 
 /// FuncFParam ::= BType IDENT;

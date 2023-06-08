@@ -117,3 +117,11 @@ fn koopa_mod_test_lv8_2() {
         "tests/koopa_scripts/lv8-2.koopa",
     );
 }
+
+#[test]
+fn koopa_mod_test_lv8_3() {
+    koopa_mod_test(
+        "tests/sysy_scripts/lv8-3.c",
+        "tests/koopa_scripts/lv8-3.koopa",
+    );
+}

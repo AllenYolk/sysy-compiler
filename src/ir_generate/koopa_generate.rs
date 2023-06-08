@@ -27,6 +27,15 @@ impl KoopaTextGenerate for CompUnit {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
+        // global values are placed before library function declarations
+        for item in self.items.iter() {
+            if let CompUnitItem::GlobalDecl(global_decl) = item {
+                let mut global_decl_text = String::new();
+                global_decl.generate(&mut global_decl_text, scopes, tsm, nsc)?;
+                append_line(lines, &global_decl_text);
+            }
+        }
+
         // declarations of SysY library functions
         append_line(lines, "decl @getint(): i32\n");
         append_line(lines, "decl @getch(): i32\n");
@@ -46,11 +55,14 @@ impl KoopaTextGenerate for CompUnit {
         scopes.add_function("starttime", "@starttime", true)?;
         scopes.add_function("stoptime", "@stoptime", true)?;
 
-        for func_def in self.func_defs.iter() {
-            let mut func_text = String::new();
-            func_def.generate(&mut func_text, scopes, tsm, nsc)?;
-            append_line(lines, &func_text);
-            append_line(lines, " ");
+        // generate function definitions
+        for item in self.items.iter() {
+            if let CompUnitItem::FuncDef(func_def) = item {
+                let mut func_text = String::new();
+                func_def.generate(&mut func_text, scopes, tsm, nsc)?;
+                append_line(lines, &func_text);
+                append_line(lines, " ");
+            }
         }
         Ok(String::new())
     }
@@ -327,6 +339,38 @@ impl KoopaTextGenerate for Stmt {
     }
 }
 
+impl KoopaTextGenerate for GlobalDecl {
+    fn generate(
+        &self,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
+    ) -> Result<String, ()> {
+        match self.decl {
+            // global constant: the same as local ones
+            Decl::Const(ref const_decl) => const_decl.generate(lines, scopes, tsm, nsc),
+            // global variables: the initial value of a global variable should always be a constant expression.
+            // We need to evaluate the rhs and add the value to the global-level symbol table.
+            Decl::Var(ref var_decl) => {
+                for def in var_decl.defs.iter() {
+                    let symbol_name = nsc.inc_and_get_named_symbol(&format!("@{}", &def.ident))?;
+                    scopes.add_value(&def.ident, &symbol_name, false)?;
+                    let init = match def.init {
+                        Some(ref init) => {
+                            let InitVal::Exp(exp) = init;
+                            exp.solve(scopes)?.to_string()
+                        }
+                        None => "zeroinit".to_string()
+                    };
+                    append_line(lines, &format!("global {} = alloc i32, {}", symbol_name, init));
+                }
+                Ok(String::new())
+            },
+        }
+    }
+}
+
 impl KoopaTextGenerate for Decl {
     fn generate(
         &self,
@@ -423,7 +467,7 @@ impl KoopaTextGenerate for VarDef {
     ) -> Result<String, ()> {
         let symbol_name = nsc.inc_and_get_named_symbol(&format!("@{}", &self.ident))?;
         append_line(lines, &format!("  {} = alloc i32", symbol_name));
-        scopes.add_value(&self.ident, &format!("{}", symbol_name), false)?;
+        scopes.add_value(&self.ident, &symbol_name, false)?;
 
         if let Some(ref init) = self.init {
             // has initial value

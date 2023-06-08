@@ -12,6 +12,8 @@ pub enum ValueLocation {
     Reg(String),
     /// Located on the stack frame.
     Stack(String),
+    /// Global value
+    Global(String),
     /// A placeholder.
     ///
     /// Used in the implementation of `FunctionData.generate(...)`,
@@ -33,6 +35,9 @@ impl ValueLocation {
             Self::Stack(addr) => {
                 format!("  lw {}, {}", reg, addr)
             }
+            Self::Global(s) => {
+                format!("  la t0, {}\n  lw {}, 0(t0)", s, reg)
+            }
             _ => String::new(),
         }
     }
@@ -49,6 +54,27 @@ impl ValueLocation {
             Self::Stack(addr2) => {
                 format!("  lw t0, {}\n  sw t0, {}", addr2, addr)
             }
+            Self::Global(s) => {
+                format!("  la t0, {}\n  lw t0, 0(t0)\n  sw t0, {}", s, addr)
+            }
+            _ => String::new(),
+        }
+    }
+
+    pub fn move_to_global(&self, name: &str) -> String {
+        match self {
+            Self::Imm(val) => {
+                format!("  li t0, {}\n  la t1, {}\n  sw t0, 0(t1)", val, name)
+            }
+            Self::Reg(r) => {
+                format!("  la t0, {}\n  sw {}, 0(t0)", name, r)
+            }
+            Self::Stack(addr) => {
+                format!("  la t0, {}\n  lw t1, {}\n  sw t1, 0(t0)", name, addr)
+            }
+            Self::Global(s) => {
+                format!("  la t0, {}\n  lw t0, 0(t0)\n  la t1, {}\n  sw t0, 0(t1)", s, name)
+            }
             _ => String::new(),
         }
     }
@@ -58,6 +84,7 @@ impl ValueLocation {
         match dest {
             Self::Reg(r) => self.move_to_reg(&r),
             Self::Stack(addr) => self.move_to_stack(&addr),
+            Self::Global(name) => self.move_to_global(&name),
             _ => String::new(),
         }
     }
@@ -98,6 +125,14 @@ mod tests {
         assert_eq!(
             ValueLocation::Stack("0(sp)".into()).move_to(ValueLocation::Stack("4(sp)".into())),
             "  lw t0, 0(sp)\n  sw t0, 4(sp)"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).move_to(ValueLocation::Reg("a0".into())),
+            "  la a0, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).move_to(ValueLocation::Stack("0(sp)".into())),
+            "  la t0, a\n  sw t0, 0(sp)"
         );
     }
 
@@ -236,6 +271,51 @@ mod tests {
         assert_eq!(
             ValueLocation::Stack("0(sp)".into()).act_as_function_arg(10, 16),
             "  lw t0, 0(sp)\n  sw t0, 24(sp)"
+        );
+
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(0, 16),
+            "  la a0, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(1, 16),
+            "  la a1, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(2, 16),
+            "  la a2, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(3, 16),
+            "  la a3, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(4, 16),
+            "  la a4, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(5, 16),
+            "  la a5, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(6, 16),
+            "  la a6, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(7, 16),
+            "  la a7, a"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(8, 16),
+            "  la t0, a\n  sw t0, 16(sp)"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(9, 16),
+            "  la t0, a\n  sw t0, 20(sp)"
+        );
+        assert_eq!(
+            ValueLocation::Global("a".into()).act_as_function_arg(10, 16),
+            "  la t0, a\n  sw t0, 24(sp)"
         );
     }
 }

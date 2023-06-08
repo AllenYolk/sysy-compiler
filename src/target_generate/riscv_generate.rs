@@ -21,16 +21,24 @@ impl RiscvGenerate for Program {
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         // global variables
-        let mut first_time = true;
         for &val in self.inst_layout() {
             let val_data = self.borrow_value(val);
-            if let Some(val_name) = val_data.name() {
-                if first_time {
-                    append_line(lines, "  .data");
-                    first_time = false;
-                }
-                append_line(lines, &format!("  .globl {}", val_name));
-            }
+            let Some(val_name) = val_data.name() else {
+                return Err(());
+            };
+
+            let mut initialization_line = String::new();
+            // call `generate` on `GlobalAlloc` to generate the initialization line
+            val_data.generate(&mut initialization_line, cxt)?; 
+
+            append_line(lines, &format!("  .data"));
+            append_line(lines, &format!("  .globl {}", &val_name[1..]));
+            append_line(lines, &format!("{}:", &val_name[1..]));
+            append_line(lines, &initialization_line);
+            append_line(lines, " ");
+
+            // store the location of the global variable
+            cxt.add_global_value(val, ValueLocation::Global(String::from(&val_name[1..])))?;
         }
 
         // function definitions
@@ -75,7 +83,7 @@ impl RiscvGenerate for FunctionData {
         let mut body_lines = String::new();
         for (bb, node) in self.layout().bbs() {
             // get basic block name
-            let Some(bbd) = cxt.get_basic_block_data(*bb) else {
+            let Some(bbd) = cxt.get_basic_block_data_in_current_function(*bb) else {
                 return Err(());
             };
             let &Some(ref bb_name) = bbd.name() else {
@@ -94,7 +102,7 @@ impl RiscvGenerate for FunctionData {
 
                 match loc {
                     ValueLocation::PlaceHolder(p) => {
-                        let Some(real_loc) = cxt.get_value_location(inst_val) else{
+                        let Some(real_loc) = cxt.get_value_location_local_or_global(inst_val) else{
                             return Err(());
                         };
                         let real_loc_str = match real_loc {
@@ -157,14 +165,14 @@ impl RiscvGenerate for Value {
     ///
     /// Search in the HashMap `cxt.value_locations` by calling `cxt.get_value_location(..)`.
     fn generate(&self, _lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
-        let Some(value_data) = cxt.get_value_data(*self) else {
+        let Some(value_data) = cxt.get_value_data_locally_or_globally(*self) else {
             return Err(());
         };
 
         match value_data.kind() {
             ValueKind::Integer(val) => Ok(ValueLocation::Imm(format!("{}", val.value()))),
             _ => {
-                if let Some(loc) = cxt.get_value_location(*self) {
+                if let Some(loc) = cxt.get_value_location_local_or_global(*self) {
                     Ok(loc.clone())
                 } else {
                     Err(())
@@ -181,8 +189,21 @@ impl RiscvGenerate for ValueData {
         match self.kind() {
             // integer constant
             ValueKind::Integer(val) => val.generate(lines, cxt),
+            // zero initialization used in global value allocation
+            ValueKind::ZeroInit(val) => {
+                let mut initialization_line = String::new();
+                let ret = val.generate(&mut initialization_line, cxt);
+                if initialization_line.contains("<type_size>") {
+                    let type_size = self.ty().size();
+                    initialization_line = initialization_line.replace("<type_size>", &type_size.to_string());
+                };
+                append_line(lines, &initialization_line);
+                ret
+            },
             // allocation operation
             ValueKind::Alloc(val) => val.generate(lines, cxt),
+            // global value allocation
+            ValueKind::GlobalAlloc(val) => val.generate(lines, cxt),
             // load operation
             ValueKind::Load(val) => val.generate(lines, cxt),
             // store operation
@@ -206,8 +227,20 @@ impl RiscvGenerate for ValueData {
 impl RiscvGenerate for values::Integer {
     type Ret = ValueLocation;
 
-    fn generate(&self, _lines: &mut String, _cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
-        Err(())
+    /// Initialize a global variable using an integer.
+    fn generate(&self, lines: &mut String, _cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        append_line(lines, &format!("  .word {}", self.value()));
+        Ok(ValueLocation::None)
+    }
+}
+
+impl RiscvGenerate for values::ZeroInit {
+    type Ret = ValueLocation;
+
+    /// Initialize a global variable using zeros.
+    fn generate(&self, lines: &mut String, _cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        append_line(lines, "  .zero <type_size>");
+        Ok(ValueLocation::None)
     }
 }
 
@@ -216,6 +249,18 @@ impl RiscvGenerate for values::Alloc {
 
     fn generate(&self, _lines: &mut String, _cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         Ok(ValueLocation::None)
+    }
+}
+
+impl RiscvGenerate for values::GlobalAlloc {
+    type Ret = ValueLocation;
+
+    /// Initialize the global value.
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        let initializer = self.init();
+        let initializer_data = cxt.program.borrow_value(initializer);
+        
+        initializer_data.generate(lines, cxt)
     }
 }
 
@@ -237,10 +282,14 @@ impl RiscvGenerate for values::Store {
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let val = self.value().generate(&mut String::new(), cxt)?;
         let dest = self.dest().generate(&mut String::new(), cxt)?;
-        if let ValueLocation::Stack(_) = dest {
-            append_line(lines, &val.move_to(dest.clone()));
-        } else {
-            return Err(());
+        dbg!(&val, &dest);
+        match dest {
+            ValueLocation::Stack(_) | ValueLocation::Global(_) => {
+                append_line(lines, &val.move_to(dest.clone()));
+            },
+            _ => {
+                return Err(());
+            }
         }
 
         Ok(ValueLocation::None)
@@ -308,10 +357,10 @@ impl RiscvGenerate for values::Branch {
         append_line(lines, &cond_loc.move_to_reg("t0"));
 
         // look up basic block names
-        let Some(true_bb_data) = cxt.get_basic_block_data(self.true_bb()) else {
+        let Some(true_bb_data) = cxt.get_basic_block_data_in_current_function(self.true_bb()) else {
             return Err(());
         };
-        let Some(false_bb_data) = cxt.get_basic_block_data(self.false_bb()) else {
+        let Some(false_bb_data) = cxt.get_basic_block_data_in_current_function(self.false_bb()) else {
             return Err(());
         };
         let Some(true_bb_name) = true_bb_data.name() else {
@@ -342,7 +391,7 @@ impl RiscvGenerate for values::Jump {
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let to_bb = self.target();
-        let Some(bb_data) = cxt.get_basic_block_data(to_bb) else {
+        let Some(bb_data) = cxt.get_basic_block_data_in_current_function(to_bb) else {
             return Err(());
         };
         let Some(bb_name) = bb_data.name() else {

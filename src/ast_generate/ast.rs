@@ -1,7 +1,14 @@
-/// CompUnit ::= [CompUnit] FuncDef;
+/// CompUnit ::= [CompUnit] (GlobalDecl | FuncDef);
+/// GlobalDecl ::= Decl;
 #[derive(Debug)]
 pub struct CompUnit {
-    pub func_defs: Vec<FuncDef>,
+    pub items: Vec<CompUnitItem>,
+}
+
+#[derive(Debug)]
+pub enum CompUnitItem {
+    GlobalDecl(GlobalDecl),
+    FuncDef(FuncDef),
 }
 
 /// FuncDef ::= FuncType IDENT "(" [FuncFParams] ")" Block;
@@ -57,6 +64,11 @@ pub enum Stmt {
     Break,
     Continue,
     Return(Option<Exp>),
+}
+
+#[derive(Debug)]
+pub struct GlobalDecl {
+    pub decl: Decl,
 }
 
 #[derive(Debug)]
