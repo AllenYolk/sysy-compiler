@@ -1,9 +1,11 @@
 use std::collections::HashMap;
 
+/// Information about a function that will be used during Koopa text generation.
 #[derive(Clone)]
 pub struct FunctionInfo {
     pub symbol: String,
     pub return_void: bool,
+    // there's no need to store parameter types!!!
 }
 
 /// The value of a symbol in the symbol table.

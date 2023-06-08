@@ -106,3 +106,11 @@ fn riscv_mod_test_lv8_1() {
         "tests/riscv_scripts/lv8-1.asm",
     );
 }
+
+#[test]
+fn riscv_mod_test_lv8_2() {
+    riscv_mod_test(
+        "tests/sysy_scripts/lv8-2.c",
+        "tests/riscv_scripts/lv8-2.asm",
+    );
+}

@@ -27,6 +27,25 @@ impl KoopaTextGenerate for CompUnit {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
+        // declarations of SysY library functions
+        append_line(lines, "decl @getint(): i32\n");
+        append_line(lines, "decl @getch(): i32\n");
+        append_line(lines, "decl @getarray(*i32): i32\n");
+        append_line(lines, "decl @putint(i32)\n");
+        append_line(lines, "decl @putch(i32)\n");
+        append_line(lines, "decl @putarray(i32, *i32)\n");
+        append_line(lines, "decl @starttime()\n");
+        append_line(lines, "decl @stoptime()\n");
+        // put these functions into the global scope
+        scopes.add_function("getint", "@getint", false)?;
+        scopes.add_function("getch", "@getch", false)?;
+        scopes.add_function("getarray", "@getarray", false)?;
+        scopes.add_function("putint", "@putint", true)?;
+        scopes.add_function("putch", "@putch", true)?;
+        scopes.add_function("putarray", "@putarray", true)?;
+        scopes.add_function("starttime", "@starttime", true)?;
+        scopes.add_function("stoptime", "@stoptime", true)?;
+
         for func_def in self.func_defs.iter() {
             let mut func_text = String::new();
             func_def.generate(&mut func_text, scopes, tsm, nsc)?;

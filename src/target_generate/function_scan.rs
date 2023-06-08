@@ -64,8 +64,6 @@ impl FunctionScanResult {
             value_locations.insert(*param, function_arg_location(i, stack_frame_size));
         }
 
-        println!("{} -> {}", func_data.name(), n_param_on_stack);
-
         Ok(Self {
             func,
             value_locations,

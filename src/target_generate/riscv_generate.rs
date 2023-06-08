@@ -48,7 +48,9 @@ impl RiscvGenerate for Program {
             func_data.generate(&mut new_lines, cxt)?;
 
             append_line(lines, &new_lines);
-            append_line(lines, " ");
+            if !new_lines.is_empty() {
+                append_line(lines, " ");
+            }
         }
 
         Ok(())
@@ -59,6 +61,11 @@ impl RiscvGenerate for FunctionData {
     type Ret = ();
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        // skip the function if it's a declaration (rather than a definition)
+        if let None = self.layout().entry_bb() {
+            return Ok(());
+        }
+
         let func_name = &self.name()[1..];
         let mut name_lines = String::new();
         append_line(&mut name_lines, "  .text");
@@ -375,10 +382,8 @@ impl RiscvGenerate for values::Call {
 
         // Get the return value.
         if format!("{:?}", callee_data.ty()) == "()".to_string() {
-            println!("unit return!");
             Ok(ValueLocation::None)
         } else {
-            println!("i32 return!");
             append_line(lines, "  sw a0, <tar>");
             Ok(ValueLocation::PlaceHolder("<tar>".to_string()))
         }
