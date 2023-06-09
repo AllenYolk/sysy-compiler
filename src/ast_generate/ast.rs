@@ -87,12 +87,14 @@ pub struct ConstDecl {
 #[derive(Debug)]
 pub struct ConstDef {
     pub ident: String,
+    pub dims: Vec<ConstExp>,
     pub init: ConstInitVal,
 }
 
 #[derive(Debug)]
 pub enum ConstInitVal {
     Exp(ConstExp),
+    Array(Vec<ConstInitVal>),
 }
 
 /// VarDecl ::= BType VarDef {"," VarDef} ";";
@@ -105,12 +107,14 @@ pub struct VarDecl {
 #[derive(Debug)]
 pub struct VarDef {
     pub ident: String,
+    pub dims: Vec<ConstExp>,
     pub init: Option<InitVal>,
 }
 
 #[derive(Debug)]
 pub enum InitVal {
     Exp(Exp),
+    Array(Vec<InitVal>),
 }
 
 ////////////////////////////////////////////////////////////////////////////
@@ -184,6 +188,7 @@ pub enum PrimaryExp {
 #[derive(Debug)]
 pub struct LVal {
     pub ident: String,
+    pub idx: Vec<Exp>,
 }
 
 ///////////////////////////////////////////////////////////////////////////

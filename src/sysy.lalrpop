@@ -121,11 +121,16 @@ ConstDecl: ConstDecl = {
 }
 
 ConstDef: ConstDef = {
-    <ident: Ident> "=" <init: ConstInitVal> => ConstDef { ident, init },
+    <ident: Ident> <dims: ("[" <ConstExp> "]")*> "=" <init: ConstInitVal> => ConstDef { ident, dims, init },
 }
 
 ConstInitVal: ConstInitVal = {
     <exp: ConstExp> => ConstInitVal::Exp(exp),
+    "{" "}" => ConstInitVal::Array(Vec::new()),
+    "{" <mut inits: (<ConstInitVal> ",")*> <init: ConstInitVal> "}" => {
+        inits.push(init);
+        ConstInitVal::Array(inits)
+    }
 }
 
 VarDecl: VarDecl = {
@@ -136,11 +141,16 @@ VarDecl: VarDecl = {
 }
 
 VarDef: VarDef = {
-    <ident: Ident> <init: ("=" <InitVal>)?> => VarDef { ident, init },
+    <ident: Ident> <dims: ("[" <ConstExp> "]")*> <init: ("=" <InitVal>)?> => VarDef { ident, dims, init },
 }
 
 InitVal: InitVal = {
     <exp: Exp> => InitVal::Exp(exp),
+    "{" "}" => InitVal::Array(Vec::new()),
+    "{" <mut inits: (<InitVal> ",")*> <init: InitVal> "}" => {
+        inits.push(init);
+        InitVal::Array(inits)
+    }
 }
 
 // Expressions
@@ -199,7 +209,7 @@ PrimaryExp: PrimaryExp = {
     <num: IntConst> => PrimaryExp::Num(num),
 }
 
-LVal: LVal = <ident: Ident> => LVal{ ident };
+LVal: LVal = <ident: Ident> <idx: ("[" <Exp> "]")*>=> LVal{ ident, idx };
 
 // Operators
 

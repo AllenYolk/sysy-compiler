@@ -116,4 +116,14 @@ mod tests {
     fn astgen_lv8_3_test() {
         astgen_test("tests/sysy_scripts/lv8-3.c");
     }
+
+    #[test]
+    fn astgen_lv9_1_test() {
+        astgen_test("tests/sysy_scripts/lv9-1.c");
+    }
+
+    #[test]
+    fn astgen_lv9_2_test() {
+        astgen_test("tests/sysy_scripts/lv9-2.c");
+    }
 }

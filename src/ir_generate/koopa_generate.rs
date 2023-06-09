@@ -358,8 +358,12 @@ impl KoopaTextGenerate for GlobalDecl {
                     scopes.add_value(&def.ident, &symbol_name, false)?;
                     let init = match def.init {
                         Some(ref init) => {
-                            let InitVal::Exp(exp) = init;
-                            exp.solve(scopes)?.to_string()
+                            match init {
+                                InitVal::Exp(exp) => {
+                                    exp.solve(scopes)?.to_string()
+                                },
+                                _ => "zeroinit".to_string()
+                            }
                         }
                         None => "zeroinit".to_string(),
                     };
@@ -438,6 +442,7 @@ impl KoopaTextGenerate for ConstInitVal {
     ) -> Result<String, ()> {
         match self {
             Self::Exp(exp) => exp.generate(lines, scopes, tsm, nsc),
+            _ => Ok(String::new())
         }
     }
 }
@@ -494,6 +499,7 @@ impl KoopaTextGenerate for InitVal {
     ) -> Result<String, ()> {
         match self {
             Self::Exp(exp) => exp.generate(lines, scopes, tsm, nsc),
+            _ => Ok(String::new())
         }
     }
 }
