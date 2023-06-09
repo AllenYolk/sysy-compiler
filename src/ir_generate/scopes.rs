@@ -13,11 +13,13 @@ pub struct FunctionInfo {
 /// In a symbol table (an element of the `values` field of the struct `Scopes`),
 /// a value identifier (a `String`) is mapped to a symbol, which is an instance of this struct.
 /// A symbol can be either a constant (a `String` indicating its literal value)
-/// or a variable (a `String` representing a Koopa symbol).
+/// or a variable (a `String` representing a Koopa symbol),
+/// or an array (constant and variable arrays are treated equally).
 #[derive(Clone)]
 pub enum SymbolTableValue {
     Const(String),
     Var(String),
+    Array(String),
 }
 
 /// The three labels defined for a `while` loop.
@@ -131,14 +133,25 @@ impl Scopes {
     /// Add a new value to the current scope.
     ///
     /// The entry is added to the symbol table at the top of the stack.
-    pub fn add_value(&mut self, identifier: &str, symbol: &str, is_const: bool) -> Result<(), ()> {
+    pub fn add_value(
+        &mut self,
+        identifier: &str,
+        symbol: &str,
+        is_const: bool,
+        is_array: bool,
+    ) -> Result<(), ()> {
         let Some(symtab) = self.values.last_mut() else {
             return Err(());
         };
-        let v = if is_const {
-            SymbolTableValue::Const(symbol.into())
+
+        let v = if is_array {
+            SymbolTableValue::Array(symbol.into())
         } else {
-            SymbolTableValue::Var(symbol.into())
+            if is_const {
+                SymbolTableValue::Const(symbol.into())
+            } else {
+                SymbolTableValue::Var(symbol.into())
+            }
         };
         if let Some(_) = symtab.insert(identifier.into(), v) {
             return Err(()); // defined multiple times
@@ -168,5 +181,12 @@ impl Scopes {
             return Err(());
         };
         Ok(res.clone())
+    }
+
+    /// Return whether we're now in the global scope.
+    ///
+    /// This method can help us distinguishing local declarations from global ones!
+    pub fn now_global(&self) -> bool {
+        self.values.len() <= 1
     }
 }

@@ -1,5 +1,6 @@
 global @z_1 = alloc i32, 5
 global @var_1 = alloc i32, zeroinit
+ 
 decl @getint(): i32
 
 decl @getch(): i32

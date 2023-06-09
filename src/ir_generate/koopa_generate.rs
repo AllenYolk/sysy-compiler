@@ -1,3 +1,4 @@
+use super::array_utils::*;
 use super::exp_solve::ExpSolve;
 use super::named_symbol::NamedSymbolCounter;
 use super::scopes::*;
@@ -34,6 +35,9 @@ impl KoopaTextGenerate for CompUnit {
                 global_decl.generate(&mut global_decl_text, scopes, tsm, nsc)?;
                 append_line(lines, &global_decl_text);
             }
+        }
+        if !lines.is_empty() {
+            append_line(lines, " ");
         }
 
         // declarations of SysY library functions
@@ -157,6 +161,7 @@ impl KoopaTextGenerate for FuncType {
 }
 
 impl KoopaTextGenerate for FuncFParam {
+    /// Returns the id of the parameter.
     fn generate(
         &self,
         _lines: &mut String,
@@ -214,17 +219,18 @@ impl KoopaTextGenerate for Stmt {
     ) -> Result<String, ()> {
         match self {
             Self::Assign(lval, exp) => {
-                let id = lval.generate(&mut String::new(), scopes, tsm, nsc)?;
-                let SymbolTableValue::Var(left) = scopes.get_value(&id)? else {
-                    return Err(()); // try to assign a constant
-                };
-
                 let mut pre = String::new();
+                if let SymbolTableValue::Const(_) = scopes.get_value(&lval.ident)? {
+                    return Err(()); // assignment to constant
+                }
+                let ptr = lval.generate(&mut pre, scopes, tsm, nsc)?;
+                append_line(lines, &pre);
+
+                pre = String::new();
                 let right = exp.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
 
-                let new_line = format!("  store {}, {}", right, left);
-                append_line(lines, &new_line);
+                append_line(lines, &format!("  store {}, {}", right, ptr));
             }
             Self::Exp(exp) => {
                 if let Some(expression) = exp {
@@ -348,32 +354,10 @@ impl KoopaTextGenerate for GlobalDecl {
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         match self.decl {
-            // global constant: the same as local ones
+            // global constant
             Decl::Const(ref const_decl) => const_decl.generate(lines, scopes, tsm, nsc),
-            // global variables: the initial value of a global variable should always be a constant expression.
-            // We need to evaluate the rhs and add the value to the global-level symbol table.
-            Decl::Var(ref var_decl) => {
-                for def in var_decl.defs.iter() {
-                    let symbol_name = nsc.inc_and_get_named_symbol(&format!("@{}", &def.ident))?;
-                    scopes.add_value(&def.ident, &symbol_name, false)?;
-                    let init = match def.init {
-                        Some(ref init) => {
-                            match init {
-                                InitVal::Exp(exp) => {
-                                    exp.solve(scopes)?.to_string()
-                                },
-                                _ => "zeroinit".to_string()
-                            }
-                        }
-                        None => "zeroinit".to_string(),
-                    };
-                    append_line(
-                        lines,
-                        &format!("global {} = alloc i32, {}", symbol_name, init),
-                    );
-                }
-                Ok(String::new())
-            }
+            // global variables
+            Decl::Var(ref var_decl) => var_decl.generate(lines, scopes, tsm, nsc),
         }
     }
 }
@@ -419,14 +403,39 @@ impl KoopaTextGenerate for ConstDef {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        // In SysY, constants are always evaluated at compile time.
-        // In the corresponding Koopa code, constants are replaced by their values.
-        // So we can just evaluate the constant value and then add the constant to the symbol table.
-        // There's no need to generate any Koopa code!
-        let mut pre = String::new();
-        let init = self.init.generate(&mut pre, scopes, tsm, nsc)?;
-        append_line(lines, &pre); // `pre` is empty.
-        scopes.add_value(&self.ident, &init, true)?;
+        if self.dims.is_empty() {
+            // Constant scalars, both global and local.
+            // No code line is generated, and the symbol will be replaced directly by its value.
+            let init = self.init.generate(&mut String::new(), scopes, tsm, nsc)?; // Get the initial value.
+            scopes.add_value(&self.ident, &init, true, false)?;
+        } else {
+            // Constant arrays.
+            let symbol = nsc.inc_and_get_named_symbol(&format!("@{}", self.ident))?;
+            scopes.add_value(&self.ident, &symbol, true, true)?;
+
+            let dims: Vec<i32> = self
+                .dims
+                .iter()
+                .map(|const_exp| const_exp.solve(scopes).unwrap())
+                .collect();
+            let dims_str = generate_allocate_dims(&dims, 0);
+            let full_init = parse_const_array_initializer(&self.init, &dims, scopes)?;
+            dbg!(full_init.clone());
+
+            if scopes.now_global() {
+                // Global constant arrays.
+                let init = full_initializer_to_global_aggregate(&full_init, &dims);
+                append_line(
+                    lines,
+                    &format!("global {} = alloc {}, {}", symbol, dims_str, init),
+                );
+            } else {
+                // Local constant arrays.
+                append_line(lines, &format!("  {} = alloc {}", symbol, dims_str));
+                let new_lines = full_initializer_to_local_lines(&symbol, &full_init, &dims, nsc)?;
+                append_line(lines, &new_lines);
+            }
+        }
 
         Ok(String::new())
     }
@@ -442,7 +451,7 @@ impl KoopaTextGenerate for ConstInitVal {
     ) -> Result<String, ()> {
         match self {
             Self::Exp(exp) => exp.generate(lines, scopes, tsm, nsc),
-            _ => Ok(String::new())
+            _ => Err(()),
         }
     }
 }
@@ -474,15 +483,84 @@ impl KoopaTextGenerate for VarDef {
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
         let symbol_name = nsc.inc_and_get_named_symbol(&format!("@{}", &self.ident))?;
-        append_line(lines, &format!("  {} = alloc i32", symbol_name));
-        scopes.add_value(&self.ident, &symbol_name, false)?;
 
-        if let Some(ref init) = self.init {
-            // has initial value
-            let mut pre = String::new();
-            let init_handle = init.generate(&mut pre, scopes, tsm, nsc)?;
-            append_line(lines, &pre);
-            append_line(lines, &format!("  store {}, {}", init_handle, symbol_name));
+        if self.dims.is_empty() {
+            scopes.add_value(&self.ident, &symbol_name, false, false)?;
+
+            if scopes.now_global() {
+                // global scalars
+                let init = match self.init {
+                    Some(ref init) => match init {
+                        InitVal::Exp(exp) => exp.solve(scopes)?.to_string(),
+                        _ => "zeroinit".to_string(),
+                    },
+                    None => "zeroinit".to_string(),
+                };
+                append_line(
+                    lines,
+                    &format!("global {} = alloc i32, {}", symbol_name, init),
+                );
+            } else {
+                // local scalars
+                append_line(lines, &format!("  {} = alloc i32", symbol_name));
+                if let Some(ref init) = self.init {
+                    // has initial value
+                    let mut pre = String::new();
+                    let init_handle = init.generate(&mut pre, scopes, tsm, nsc)?;
+                    append_line(lines, &pre);
+                    append_line(lines, &format!("  store {}, {}", init_handle, symbol_name));
+                }
+            }
+        } else {
+            scopes.add_value(&self.ident, &symbol_name, false, true)?;
+
+            let dims: Vec<i32> = self
+                .dims
+                .iter()
+                .map(|const_exp| const_exp.solve(scopes).unwrap())
+                .collect();
+            let dims_str = generate_allocate_dims(&dims, 0);
+            let mut pre_lines = String::new();
+            let full_init = match self.init {
+                Some(ref init) => Some(parse_var_array_initializer(
+                    &mut pre_lines,
+                    init,
+                    &dims,
+                    scopes,
+                    tsm,
+                    nsc,
+                )?),
+                None => None,
+            };
+            append_line(lines, &pre_lines);
+
+            dbg!(full_init.clone());
+
+            if scopes.now_global() {
+                // global arrays
+                let init = match full_init {
+                    Some(ref full_init_vec) => {
+                        full_initializer_to_global_aggregate(&full_init_vec, &dims)
+                    }
+                    None => "zeroinit".to_string(),
+                };
+                append_line(
+                    lines,
+                    &format!("global {} = alloc {}, {}", symbol_name, dims_str, init),
+                );
+            } else {
+                // local arrays
+                append_line(lines, &format!("  {} = alloc {}", symbol_name, dims_str));
+                if let Some(ref full_init_content) = full_init {
+                    let new_lines = full_initializer_to_local_lines(
+                        &symbol_name,
+                        &full_init_content,
+                        &dims,
+                        nsc,
+                    )?;
+                    append_line(lines, &new_lines);
+                }
+            }
         }
 
         Ok(String::new())
@@ -499,7 +577,7 @@ impl KoopaTextGenerate for InitVal {
     ) -> Result<String, ()> {
         match self {
             Self::Exp(exp) => exp.generate(lines, scopes, tsm, nsc),
-            _ => Ok(String::new())
+            _ => Ok(String::new()),
         }
     }
 }
@@ -878,19 +956,17 @@ impl KoopaTextGenerate for PrimaryExp {
             Self::Num(num) => Ok(format!("{}", num)),
             Self::LVal(lval) => {
                 let mut pre = String::new();
-                let id = lval.generate(&mut pre, scopes, tsm, nsc)?;
+                let symbol = lval.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
-                match scopes.get_value(&id)? {
-                    SymbolTableValue::Const(s) => {
-                        // `s` is a literal value, so we can just return it.
-                        Ok(s)
-                    }
-                    SymbolTableValue::Var(s) => {
-                        // `s` is a symbol name pointing to an address, so we need to load the value.
-                        let new_temp_symbol = tsm.new_temp_symbol();
-                        append_line(lines, &format!("  {} = load {}", new_temp_symbol, s));
-                        Ok(new_temp_symbol)
-                    }
+
+                if let SymbolTableValue::Const(_) = scopes.get_value(&lval.ident)? {
+                    // immediate value
+                    Ok(symbol)
+                } else {
+                    // pointer
+                    let new_temp_symbol = tsm.new_temp_symbol();
+                    append_line(lines, &format!("  {} = load {}", new_temp_symbol, symbol));
+                    Ok(new_temp_symbol)
                 }
             }
         }
@@ -898,13 +974,24 @@ impl KoopaTextGenerate for PrimaryExp {
 }
 
 impl KoopaTextGenerate for LVal {
+    /// Return the symbol corresponding to the identifier.
+    ///
+    /// If the identifier is a constant, return the constant value.
+    /// If the identifier is a variable or an array element, return a pointer to it.
+    /// Notice that lines will be changed if the identifier is an array.
     fn generate(
         &self,
-        _lines: &mut String,
-        _scopes: &mut Scopes,
-        _tsm: &mut TempSymbolManager,
-        _nsc: &mut NamedSymbolCounter,
+        lines: &mut String,
+        scopes: &mut Scopes,
+        tsm: &mut TempSymbolManager,
+        nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
-        Ok(self.ident.clone()) // return the identifier
+        match scopes.get_value(&self.ident)? {
+            SymbolTableValue::Var(v) => Ok(v),
+            SymbolTableValue::Const(c) => Ok(c),
+            SymbolTableValue::Array(a) => {
+                get_pointer_to_element_exp_idx(lines, &a, &self.idx, scopes, tsm, nsc)
+            }
+        }
     }
 }

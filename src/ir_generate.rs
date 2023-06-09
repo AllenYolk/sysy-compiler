@@ -1,3 +1,4 @@
+mod array_utils;
 mod exp_solve;
 mod koopa_generate;
 mod named_symbol;

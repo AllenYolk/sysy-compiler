@@ -1,0 +1,56 @@
+global @x_1 = alloc [i32, 2], {10, 20}
+global @xx_1 = alloc i32, 9
+global @y_1 = alloc [i32, 3], {114, 0, 0}
+global @q_1 = alloc [i32, 5], zeroinit
+ 
+decl @getint(): i32
+
+decl @getch(): i32
+
+decl @getarray(*i32): i32
+
+decl @putint(i32)
+
+decl @putch(i32)
+
+decl @putarray(i32, *i32)
+
+decl @starttime()
+
+decl @stoptime()
+
+fun @main(): i32 {
+%entry:
+  %0 = load @xx_1
+  %1 = sub %0, 1
+  @arr_1 = alloc [i32, 5]
+  %array_ptr_1 = getelemptr @arr_1, 0
+  store 1, %array_ptr_1
+  %array_ptr_2 = getelemptr @arr_1, 1
+  store 2, %array_ptr_2
+  %array_ptr_3 = getelemptr @arr_1, 2
+  store %1, %array_ptr_3
+  %array_ptr_4 = getelemptr @arr_1, 3
+  store 0, %array_ptr_4
+  %array_ptr_5 = getelemptr @arr_1, 4
+  store 0, %array_ptr_5
+  @brr_1 = alloc [i32, 3]
+  %array_ptr_6 = getelemptr @brr_1, 0
+  store 5, %array_ptr_6
+  %array_ptr_7 = getelemptr @brr_1, 1
+  store 0, %array_ptr_7
+  %array_ptr_8 = getelemptr @brr_1, 2
+  store 0, %array_ptr_8
+  @crr_1 = alloc [i32, 3]
+  %2 = add 1, 1
+  %array_ptr_9 = getelemptr @arr_1, %2
+  %3 = load %array_ptr_9
+  %array_ptr_10 = getelemptr @x_1, 0
+  %4 = load %array_ptr_10
+  %5 = add %3, %4
+  %array_ptr_11 = getelemptr @crr_1, 3
+  %6 = load %array_ptr_11
+  %7 = add %5, %6
+  ret %7
+}
+ 
