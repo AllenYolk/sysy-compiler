@@ -97,8 +97,11 @@ impl ValueLocation {
             Self::Stack(addr) => {
                 // `addr` has the form `offset(base)`, where `offset` is a number and `base` is a register.
                 // We need to extract `offset` and `base` from `addr`.
-                let splitted_result: Vec<&str> = addr.split(|c| { c == '(' || c == ')' }).collect();
-                format!("  addi {}, {}, {}", reg, splitted_result[1], splitted_result[0])
+                let splitted_result: Vec<&str> = addr.split(|c| c == '(' || c == ')').collect();
+                format!(
+                    "  addi {}, {}, {}",
+                    reg, splitted_result[1], splitted_result[0]
+                )
             }
             Self::Global(s) => {
                 format!("  la {}, {}", reg, s)
@@ -138,7 +141,7 @@ mod tests {
             "  mv a1, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).move_content_to(ValueLocation::Stack("0(sp)".into(), )),
+            ValueLocation::Reg("a0".into()).move_content_to(ValueLocation::Stack("0(sp)".into(),)),
             "  sw a0, 0(sp)"
         );
         assert_eq!(
@@ -147,15 +150,17 @@ mod tests {
         );
 
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).move_content_to(ValueLocation::Reg("a0".into())),
+            ValueLocation::Stack("0(sp)".into(),).move_content_to(ValueLocation::Reg("a0".into())),
             "  lw a0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).move_content_to(ValueLocation::Stack("4(sp)".into(), )),
+            ValueLocation::Stack("0(sp)".into(),)
+                .move_content_to(ValueLocation::Stack("4(sp)".into(),)),
             "  lw t0, 0(sp)\n  sw t0, 4(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).move_content_to(ValueLocation::Global("a".into())),
+            ValueLocation::Stack("0(sp)".into(),)
+                .move_content_to(ValueLocation::Global("a".into())),
             "  la t0, a\n  lw t1, 0(sp)\n  sw t1, 0(t0)"
         );
 
@@ -164,7 +169,8 @@ mod tests {
             "  la t0, a\n  lw a0, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).move_content_to(ValueLocation::Stack("0(sp)".into(), )),
+            ValueLocation::Global("a".into())
+                .move_content_to(ValueLocation::Stack("0(sp)".into(),)),
             "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 0(sp)"
         );
         assert_eq!(
@@ -266,47 +272,47 @@ mod tests {
         );
 
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(0, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(0, 16),
             "  lw a0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(1, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(1, 16),
             "  lw a1, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(2, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(2, 16),
             "  lw a2, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(3, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(3, 16),
             "  lw a3, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(4, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(4, 16),
             "  lw a4, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(5, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(5, 16),
             "  lw a5, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(6, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(6, 16),
             "  lw a6, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(7, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(7, 16),
             "  lw a7, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(8, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(8, 16),
             "  lw t0, 0(sp)\n  sw t0, 16(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(9, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(9, 16),
             "  lw t0, 0(sp)\n  sw t0, 20(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(10, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(10, 16),
             "  lw t0, 0(sp)\n  sw t0, 24(sp)"
         );
 

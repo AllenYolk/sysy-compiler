@@ -18,6 +18,14 @@ pub struct FunctionScanResult {
     /// Each of them has a **unique** location on the stack!
     /// Notice that `Value` has implemented the `Copy` trait!
     pub value_locations: HashMap<Value, ValueLocation>,
+    /// Whether the `Value`'s `ValueLocation` contains a pointer to:
+    /// 1. the data that a Koopa symbol refers to
+    /// or
+    /// 2. the data that a Koopa pointer points to
+    /// rather than containing these data themselves.
+    ///
+    /// If true, we cannot load or store the `Value` directly.
+    pub contain_pointer: HashMap<Value, bool>,
     /// The size of the stack frame.
     ///
     /// This value has been ceiled up to 16 bytes.
@@ -35,13 +43,14 @@ impl FunctionScanResult {
         let mut n_param_on_stack = 0usize;
         let mut has_call = false;
         let mut value_slots = HashMap::new();
-
+        let mut contain_pointer = HashMap::new();
         func_data.scan(
             &mut value_slots,
+            &mut contain_pointer,
             &mut n_local_var,
             &mut n_param_on_stack,
             &mut has_call,
-            None
+            None,
         )?;
 
         let stack_frame_size = ceil_to_k(
@@ -70,6 +79,7 @@ impl FunctionScanResult {
         Ok(Self {
             func,
             value_locations,
+            contain_pointer,
             stack_frame_size,
             ra_slot_location,
         })
@@ -89,6 +99,7 @@ trait FunctionScan {
     fn scan(
         &self,
         value_slots: &mut HashMap<Value, usize>,
+        contain_pointer: &mut HashMap<Value, bool>,
         n_local_var: &mut usize,
         n_param_on_stack: &mut usize,
         has_call: &mut bool,
@@ -102,6 +113,7 @@ impl FunctionScan for FunctionData {
     fn scan(
         &self,
         value_slots: &mut HashMap<Value, usize>,
+        contain_pointer: &mut HashMap<Value, bool>,
         n_local_var: &mut usize,
         n_param_on_stack: &mut usize,
         has_call: &mut bool,
@@ -110,12 +122,26 @@ impl FunctionScan for FunctionData {
         for (_bb, node) in self.layout().bbs() {
             for &inst_val in node.insts().keys() {
                 let inst_val_data = self.dfg().value(inst_val);
-                dbg!(&inst_val_data);
-                let loc =
-                    inst_val_data.scan(value_slots, n_local_var, n_param_on_stack, has_call, None)?;
+                let loc = inst_val_data.scan(
+                    value_slots,
+                    contain_pointer,
+                    n_local_var,
+                    n_param_on_stack,
+                    has_call,
+                    None,
+                )?;
                 match loc {
                     Some(o) => {
+                        // the instruction yields a new value
                         value_slots.insert(inst_val, o);
+                        match inst_val_data.kind() {
+                            ValueKind::GetElemPtr(_) => {
+                                contain_pointer.insert(inst_val, true);
+                            }
+                            _ => {
+                                contain_pointer.insert(inst_val, false);
+                            }
+                        }
                     }
                     None => (),
                 }
@@ -132,21 +158,85 @@ impl FunctionScan for ValueData {
     fn scan(
         &self,
         value_slots: &mut HashMap<Value, usize>,
+        contain_pointer: &mut HashMap<Value, bool>,
         n_local_var: &mut usize,
         n_param_on_stack: &mut usize,
         has_call: &mut bool,
         _value_data: Option<&ValueData>,
     ) -> Result<Self::Ret, ()> {
         match self.kind() {
-            ValueKind::Alloc(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
-            ValueKind::Load(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
-            ValueKind::Store(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
-            ValueKind::GetElemPtr(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
-            ValueKind::Binary(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
-            ValueKind::Branch(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
-            ValueKind::Jump(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
-            ValueKind::Call(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
-            ValueKind::Return(val) => val.scan(value_slots, n_local_var, n_param_on_stack, has_call, Some(self)),
+            ValueKind::Alloc(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::Load(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::Store(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::GetElemPtr(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::Binary(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::Branch(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::Jump(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::Call(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::Return(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
 
             // others: unreachable
             _ => Err(()),
@@ -160,6 +250,7 @@ impl FunctionScan for values::Alloc {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         n_local_var: &mut usize,
         _n_param_on_stack: &mut usize,
         _has_call: &mut bool,
@@ -186,6 +277,7 @@ impl FunctionScan for values::Load {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         n_local_var: &mut usize,
         _n_param_on_stack: &mut usize,
         _has_call: &mut bool,
@@ -202,6 +294,7 @@ impl FunctionScan for values::Store {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         _n_local_var: &mut usize,
         _n_param_on_stack: &mut usize,
         _has_call: &mut bool,
@@ -217,6 +310,7 @@ impl FunctionScan for values::GetElemPtr {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         n_local_var: &mut usize,
         _n_param_on_stack: &mut usize,
         _has_call: &mut bool,
@@ -233,6 +327,7 @@ impl FunctionScan for values::Binary {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         n_local_var: &mut usize,
         _n_param_on_stack: &mut usize,
         _has_call: &mut bool,
@@ -249,6 +344,7 @@ impl FunctionScan for values::Branch {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         _n_local_var: &mut usize,
         _n_param_on_stack: &mut usize,
         _has_call: &mut bool,
@@ -264,6 +360,7 @@ impl FunctionScan for values::Jump {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         _n_local_var: &mut usize,
         _n_param_on_stack: &mut usize,
         _has_call: &mut bool,
@@ -279,6 +376,7 @@ impl FunctionScan for values::Call {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         n_local_var: &mut usize,
         n_param_on_stack: &mut usize,
         has_call: &mut bool,
@@ -302,6 +400,7 @@ impl FunctionScan for values::Return {
     fn scan(
         &self,
         _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
         _n_local_var: &mut usize,
         _n_param_on_stack: &mut usize,
         _has_call: &mut bool,

@@ -97,4 +97,26 @@ impl<'a> ProgramContext<'a> {
         };
         Ok(())
     }
+
+    /// Whether the `Value`'s `ValueLocation` contains a **pointer** to:
+    /// 1. the data that a Koopa symbol refers to
+    /// or
+    /// 2. the data that a Koopa pointer points to
+    /// rather than containing the **data themselves**.
+    ///
+    /// If true, we cannot load or store the `Value` directly.
+    pub fn location_of_value_contain_pointer(&self, val: Value) -> Result<bool, ()> {
+        if self.global_values.contains_key(&val) {
+            return Ok(false);
+        };
+
+        let Some(ref f) = self.func else {
+            return Err(());
+        };
+        let Some(&ans) = f.contain_pointer.get(&val) else {
+            return Err(());
+        };
+
+        Ok(ans)
+    }
 }
