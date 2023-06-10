@@ -420,7 +420,6 @@ impl KoopaTextGenerate for ConstDef {
                 .collect();
             let dims_str = generate_allocate_dims(&dims, 0);
             let full_init = parse_const_array_initializer(&self.init, &dims, scopes)?;
-            dbg!(full_init.clone());
 
             if scopes.now_global() {
                 // Global constant arrays.
@@ -533,8 +532,6 @@ impl KoopaTextGenerate for VarDef {
                 None => None,
             };
             append_line(lines, &pre_lines);
-
-            dbg!(full_init.clone());
 
             if scopes.now_global() {
                 // global arrays

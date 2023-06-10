@@ -24,7 +24,7 @@ pub enum ValueLocation {
 
 impl ValueLocation {
     /// Generate the instruction (a `String`) that moves the value (with the location) to the given register.
-    pub fn move_to_reg(&self, reg: &str) -> String {
+    pub fn move_content_to_reg(&self, reg: &str) -> String {
         match self {
             Self::Imm(val) => {
                 format!("  li {}, {}", reg, val)
@@ -43,7 +43,7 @@ impl ValueLocation {
     }
 
     /// Generate the instruction (a `String`) that moves the value (with the location) to the given stack address.
-    pub fn move_to_stack(&self, addr: &str) -> String {
+    pub fn move_content_to_stack(&self, addr: &str) -> String {
         match self {
             Self::Imm(val) => {
                 format!("  li t0, {}\n  sw t0, {}", val, addr)
@@ -61,7 +61,7 @@ impl ValueLocation {
         }
     }
 
-    pub fn move_to_global(&self, name: &str) -> String {
+    pub fn move_content_to_global(&self, name: &str) -> String {
         match self {
             Self::Imm(val) => {
                 format!("  li t0, {}\n  la t1, {}\n  sw t0, 0(t1)", val, name)
@@ -83,11 +83,26 @@ impl ValueLocation {
     }
 
     /// Generate the instruction (a `String`) that moves the value (with the location) to the given destination.
-    pub fn move_to(&self, dest: ValueLocation) -> String {
+    pub fn move_content_to(&self, dest: ValueLocation) -> String {
         match dest {
-            Self::Reg(r) => self.move_to_reg(&r),
-            Self::Stack(addr) => self.move_to_stack(&addr),
-            Self::Global(name) => self.move_to_global(&name),
+            Self::Reg(r) => self.move_content_to_reg(&r),
+            Self::Stack(addr) => self.move_content_to_stack(&addr),
+            Self::Global(name) => self.move_content_to_global(&name),
+            _ => String::new(),
+        }
+    }
+
+    pub fn move_address_to_reg(&self, reg: &str) -> String {
+        match self {
+            Self::Stack(addr) => {
+                // `addr` has the form `offset(base)`, where `offset` is a number and `base` is a register.
+                // We need to extract `offset` and `base` from `addr`.
+                let splitted_result: Vec<&str> = addr.split(|c| { c == '(' || c == ')' }).collect();
+                format!("  addi {}, {}, {}", reg, splitted_result[1], splitted_result[0])
+            }
+            Self::Global(s) => {
+                format!("  la {}, {}", reg, s)
+            }
             _ => String::new(),
         }
     }
@@ -95,7 +110,7 @@ impl ValueLocation {
     /// Generate the instruction (a `String`) that treat the value as the i-th function argument.
     pub fn act_as_function_arg(&self, i: usize, stack_frame_size: usize) -> String {
         let dest = function_arg_location(i, stack_frame_size);
-        self.move_to(dest)
+        self.move_content_to(dest)
     }
 }
 
@@ -106,54 +121,54 @@ mod tests {
     #[test]
     fn move_to_test() {
         assert_eq!(
-            ValueLocation::Imm("1".into()).move_to(ValueLocation::Reg("a0".into())),
+            ValueLocation::Imm("1".into()).move_content_to(ValueLocation::Reg("a0".into())),
             "  li a0, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).move_to(ValueLocation::Stack("0(sp)".into())),
+            ValueLocation::Imm("1".into()).move_content_to(ValueLocation::Stack("0(sp)".into())),
             "  li t0, 1\n  sw t0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).move_to(ValueLocation::Global("a".into())),
+            ValueLocation::Imm("1".into()).move_content_to(ValueLocation::Global("a".into())),
             "  li t0, 1\n  la t1, a\n  sw t0, 0(t1)"
         );
 
         assert_eq!(
-            ValueLocation::Reg("a0".into()).move_to(ValueLocation::Reg("a1".into())),
+            ValueLocation::Reg("a0".into()).move_content_to(ValueLocation::Reg("a1".into())),
             "  mv a1, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).move_to(ValueLocation::Stack("0(sp)".into())),
+            ValueLocation::Reg("a0".into()).move_content_to(ValueLocation::Stack("0(sp)".into(), )),
             "  sw a0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).move_to(ValueLocation::Global("a".into())),
+            ValueLocation::Reg("a0".into()).move_content_to(ValueLocation::Global("a".into())),
             "  la t0, a\n  sw a0, 0(t0)"
         );
 
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).move_to(ValueLocation::Reg("a0".into())),
+            ValueLocation::Stack("0(sp)".into(), ).move_content_to(ValueLocation::Reg("a0".into())),
             "  lw a0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).move_to(ValueLocation::Stack("4(sp)".into())),
+            ValueLocation::Stack("0(sp)".into(), ).move_content_to(ValueLocation::Stack("4(sp)".into(), )),
             "  lw t0, 0(sp)\n  sw t0, 4(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).move_to(ValueLocation::Global("a".into())),
+            ValueLocation::Stack("0(sp)".into(), ).move_content_to(ValueLocation::Global("a".into())),
             "  la t0, a\n  lw t1, 0(sp)\n  sw t1, 0(t0)"
         );
 
         assert_eq!(
-            ValueLocation::Global("a".into()).move_to(ValueLocation::Reg("a0".into())),
+            ValueLocation::Global("a".into()).move_content_to(ValueLocation::Reg("a0".into())),
             "  la t0, a\n  lw a0, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).move_to(ValueLocation::Stack("0(sp)".into())),
+            ValueLocation::Global("a".into()).move_content_to(ValueLocation::Stack("0(sp)".into(), )),
             "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).move_to(ValueLocation::Global("b".into())),
+            ValueLocation::Global("a".into()).move_content_to(ValueLocation::Global("b".into())),
             "  la t0, a\n  lw t0, 0(t0)\n  la t1, b\n  sw t0, 0(t1)"
         )
     }
@@ -251,47 +266,47 @@ mod tests {
         );
 
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(0, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(0, 16),
             "  lw a0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(1, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(1, 16),
             "  lw a1, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(2, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(2, 16),
             "  lw a2, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(3, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(3, 16),
             "  lw a3, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(4, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(4, 16),
             "  lw a4, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(5, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(5, 16),
             "  lw a5, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(6, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(6, 16),
             "  lw a6, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(7, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(7, 16),
             "  lw a7, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(8, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(8, 16),
             "  lw t0, 0(sp)\n  sw t0, 16(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(9, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(9, 16),
             "  lw t0, 0(sp)\n  sw t0, 20(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into()).act_as_function_arg(10, 16),
+            ValueLocation::Stack("0(sp)".into(), ).act_as_function_arg(10, 16),
             "  lw t0, 0(sp)\n  sw t0, 24(sp)"
         );
 

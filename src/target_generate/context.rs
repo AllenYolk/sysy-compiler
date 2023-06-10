@@ -9,6 +9,7 @@ pub struct ProgramContext<'a> {
     pub program: &'a Program,
     /// The current function.
     pub func: Option<FunctionScanResult>,
+    // The locations of the global values.
     pub global_values: HashMap<Value, ValueLocation>,
 }
 
@@ -52,8 +53,7 @@ impl<'a> ProgramContext<'a> {
     /// The order of searching does not matter, since the `Value` handler is unique.
     pub fn get_value_data_locally_or_globally(&self, val: Value) -> Option<ValueData> {
         // `Value` has implemented the Copy trait!
-        if self.global_values.contains_key(&val) {
-            // The value is a global value.
+        if self.program.borrow_values().contains_key(&val) {
             return Some(self.program.borrow_value(val).clone());
         }
 

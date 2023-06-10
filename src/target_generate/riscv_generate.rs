@@ -20,25 +20,27 @@ impl RiscvGenerate for Program {
     type Ret = ();
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        Type::set_ptr_size(4); // necessary according to the tutorial
+
         // global variables
         for &val in self.inst_layout() {
             let val_data = self.borrow_value(val);
-            let Some(val_name) = val_data.name() else {
+            let Some(val_name) = val_data.name() else { // with "@" or "%" prefix
                 return Err(());
             };
+            // store the location of the global variable
+            cxt.add_global_value(val, ValueLocation::Global(String::from(&val_name[1..])))?;
 
             let mut initialization_line = String::new();
             // call `generate` on `GlobalAlloc` to generate the initialization line
             val_data.generate(&mut initialization_line, cxt)?;
 
+            // append the code lines to `lines`
             append_line(lines, &format!("  .data"));
             append_line(lines, &format!("  .globl {}", &val_name[1..]));
             append_line(lines, &format!("{}:", &val_name[1..]));
             append_line(lines, &initialization_line);
-            append_line(lines, " ");
-
-            // store the location of the global variable
-            cxt.add_global_value(val, ValueLocation::Global(String::from(&val_name[1..])))?;
+            append_line(lines, " ");   
         }
 
         // function definitions
@@ -187,20 +189,33 @@ impl RiscvGenerate for ValueData {
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         match self.kind() {
+            //////////////////////////////////////////////////////////////////////////////////////////////
+            // initialization of a global value                                                         //
+            //////////////////////////////////////////////////////////////////////////////////////////////
+
             // integer constant
             ValueKind::Integer(val) => val.generate(lines, cxt),
             // zero initialization used in global value allocation
             ValueKind::ZeroInit(val) => {
                 let mut initialization_line = String::new();
                 let ret = val.generate(&mut initialization_line, cxt);
+                // we have to figure out the size of the zero-initialized `ValueData`,
+                // rather than the size of a `ZeroInit`!!!
                 if initialization_line.contains("<type_size>") {
-                    let type_size = self.ty().size();
+                    let type_size = self.ty().size(); // If it's an array, `size()` will implement DFS and return the whole size.
                     initialization_line =
                         initialization_line.replace("<type_size>", &type_size.to_string());
                 };
                 append_line(lines, &initialization_line);
                 ret
             }
+            // initialization of a global value using an aggregate (i.e. `{ ..., {...}, ... }`)
+            ValueKind::Aggregate(val) => val.generate(lines, cxt),
+
+            //////////////////////////////////////////////////////////////////////////////////////////////
+            // other instructions                                                                       //
+            //////////////////////////////////////////////////////////////////////////////////////////////
+
             // allocation operation
             ValueKind::Alloc(val) => val.generate(lines, cxt),
             // global value allocation
@@ -209,6 +224,8 @@ impl RiscvGenerate for ValueData {
             ValueKind::Load(val) => val.generate(lines, cxt),
             // store operation
             ValueKind::Store(val) => val.generate(lines, cxt),
+            // get element pointer
+            ValueKind::GetElemPtr(val) => val.generate(lines, cxt),
             // binary operation
             ValueKind::Binary(val) => val.generate(lines, cxt),
             // branch operation
@@ -245,6 +262,22 @@ impl RiscvGenerate for values::ZeroInit {
     }
 }
 
+impl RiscvGenerate for values::Aggregate {
+    type Ret = ValueLocation;
+
+    /// Initialize a global variable using an aggregate.
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        for e in self.elems() {
+            let Some(sub_value_data) = cxt.get_value_data_locally_or_globally(*e) else {
+                return Err(());
+            };
+            sub_value_data.generate(lines, cxt)?;
+        }
+
+        Ok(ValueLocation::None)
+    }
+}
+
 impl RiscvGenerate for values::Alloc {
     type Ret = ValueLocation;
 
@@ -256,10 +289,12 @@ impl RiscvGenerate for values::Alloc {
 impl RiscvGenerate for values::GlobalAlloc {
     type Ret = ValueLocation;
 
-    /// Initialize the global value.
+    /// Initialize the global value by calling `generate` on the `ValueData` corresponding to the `init` field.
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let initializer = self.init();
-        let initializer_data = cxt.program.borrow_value(initializer);
+        let Some(initializer_data) = cxt.get_value_data_locally_or_globally(initializer) else {
+            return Err(());
+        };
 
         initializer_data.generate(lines, cxt)
     }
@@ -270,7 +305,7 @@ impl RiscvGenerate for values::Load {
 
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let src = self.src().generate(&mut String::new(), cxt)?;
-        append_line(lines, &src.move_to_reg("t0"));
+        append_line(lines, &src.move_content_to_reg("t0"));
         append_line(lines, "  sw t0, <tar>");
 
         Ok(ValueLocation::PlaceHolder("<tar>".to_string()))
@@ -283,10 +318,12 @@ impl RiscvGenerate for values::Store {
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let val = self.value().generate(&mut String::new(), cxt)?;
         let dest = self.dest().generate(&mut String::new(), cxt)?;
-        dbg!(&val, &dest);
+        dbg!(cxt.get_value_data_locally_or_globally(self.value()).unwrap().ty());
+        dbg!(cxt.get_value_data_locally_or_globally(self.dest()).unwrap().ty());
+
         match dest {
             ValueLocation::Stack(_) | ValueLocation::Global(_) => {
-                append_line(lines, &val.move_to(dest.clone()));
+                append_line(lines, &val.move_content_to(dest.clone()));
             }
             _ => {
                 return Err(());
@@ -297,6 +334,26 @@ impl RiscvGenerate for values::Store {
     }
 }
 
+impl RiscvGenerate for values::GetElemPtr {
+    type Ret = ValueLocation;
+
+    /// Generate a pointer to the element.
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        // get two locations
+        let src = self.src().generate(&mut String::new(), cxt)?;
+        let idx = self.index().generate(&mut String::new(), cxt)?;
+
+        // compute the base address to register t0
+        append_line(lines, &src.move_address_to_reg("t0"));
+        append_line(lines, &idx.move_content_to_reg("t1"));
+        append_line(lines, "  slli t1, t1, 2");
+        append_line(lines, "  add t0, t0, t1");
+        append_line(lines, "  sw t0, <tar>");
+
+        Ok(ValueLocation::PlaceHolder("<tar>".to_string()))
+    }
+}
+
 impl RiscvGenerate for values::Binary {
     type Ret = ValueLocation;
 
@@ -304,8 +361,8 @@ impl RiscvGenerate for values::Binary {
         let loc_l = self.lhs().generate(&mut String::new(), cxt)?;
         let loc_r = self.rhs().generate(&mut String::new(), cxt)?;
 
-        append_line(lines, &loc_l.move_to_reg("t0"));
-        append_line(lines, &loc_r.move_to_reg("t1"));
+        append_line(lines, &loc_l.move_content_to_reg("t0"));
+        append_line(lines, &loc_r.move_content_to_reg("t1"));
         match self.op() {
             BinaryOp::NotEq => {
                 append_line(lines, "  xor t0, t0, t1");
@@ -355,7 +412,7 @@ impl RiscvGenerate for values::Branch {
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         let cond_value = self.cond();
         let cond_loc = cond_value.generate(&mut String::new(), cxt)?;
-        append_line(lines, &cond_loc.move_to_reg("t0"));
+        append_line(lines, &cond_loc.move_content_to_reg("t0"));
 
         // look up basic block names
         let Some(true_bb_data) = cxt.get_basic_block_data_in_current_function(self.true_bb()) else {
@@ -446,7 +503,7 @@ impl RiscvGenerate for values::Return {
     fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
         if let Some(ret_val) = self.value() {
             let loc = ret_val.generate(&mut String::new(), cxt)?;
-            append_line(lines, &loc.move_to_reg("a0"));
+            append_line(lines, &loc.move_content_to_reg("a0"));
         }
         append_line(lines, "<epilogue>"); // a place holder, which will be replaced by the epilogue in `FunctionData.generate`.
         append_line(lines, "  ret");
