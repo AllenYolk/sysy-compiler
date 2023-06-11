@@ -30,17 +30,31 @@ pub fn get_pointer_to_element_exp_idx(
 ) -> Result<String, ()> {
     let mut old_handler = String::from(array);
     let mut new_handler: String = String::from(array);
-    for exp in idx.iter() {
-        let mut pre = String::new();
-        let i = exp.generate(&mut pre, scopes, tsm, nsc)?;
-        append_line(lines, &pre);
+    for (j, exp) in idx.iter().enumerate() {
+        if (j == 0) && scopes.has_cur_func_param(array) {
+            let mut pre = String::new();
+            let i = exp.generate(&mut pre, scopes, tsm, nsc)?;
+            append_line(lines, &pre);
+            let intermediate_handler = tsm.new_temp_symbol();
+            new_handler = nsc.inc_and_get_named_symbol("%array_ptr")?;
+            append_line(lines, &format!("  {} = load {}", intermediate_handler, old_handler));
+            append_line(
+                lines,
+                &format!("  {} = getptr {}, {}", new_handler, intermediate_handler, i),
+            );
+            old_handler = new_handler.clone();
+        } else {
+            let mut pre = String::new();
+            let i = exp.generate(&mut pre, scopes, tsm, nsc)?;
+            append_line(lines, &pre);
 
-        new_handler = nsc.inc_and_get_named_symbol("%array_ptr")?;
-        append_line(
-            lines,
-            &format!("  {} = getelemptr {}, {}", new_handler, old_handler, i),
-        );
-        old_handler = new_handler.clone();
+            new_handler = nsc.inc_and_get_named_symbol("%array_ptr")?;
+            append_line(
+                lines,
+                &format!("  {} = getelemptr {}, {}", new_handler, old_handler, i),
+            );
+            old_handler = new_handler.clone();
+        }
     }
 
     Ok(new_handler)
@@ -54,17 +68,29 @@ pub fn get_pointer_to_element_int_idx(
     lines: &mut String,
     array: &str,
     idx: Vec<usize>,
+    scopes: &mut Scopes,
     nsc: &mut NamedSymbolCounter,
 ) -> Result<String, ()> {
     let mut old_handler = String::from(array);
     let mut new_handler: String = String::from(array);
-    for i in idx.iter() {
-        new_handler = nsc.inc_and_get_named_symbol("%array_ptr")?;
-        append_line(
-            lines,
-            &format!("  {} = getelemptr {}, {}", new_handler, old_handler, i),
-        );
-        old_handler = new_handler.clone();
+    for (j, i) in idx.iter().enumerate() {
+        if (j == 0) && scopes.has_cur_func_param(array) {
+            let intermediate_handler = nsc.inc_and_get_named_symbol("%array_ptr")?;
+            new_handler = nsc.inc_and_get_named_symbol("%array_ptr")?;
+            append_line(lines, &format!("  {} = load {}", intermediate_handler, old_handler));
+            append_line(
+                lines,
+                &format!("  {} = getptr {}, {}", new_handler, intermediate_handler, i),
+            );
+            old_handler = new_handler.clone();
+        } else {
+            new_handler = nsc.inc_and_get_named_symbol("%array_ptr")?;
+            append_line(
+                lines,
+                &format!("  {} = getelemptr {}, {}", new_handler, old_handler, i),
+            );
+            old_handler = new_handler.clone();
+        }
     }
 
     Ok(new_handler)
@@ -275,6 +301,7 @@ pub fn full_initializer_to_local_lines(
     array: &str,
     full_init: &Vec<String>,
     dims: &[i32],
+    scopes: &mut Scopes,
     nsc: &mut NamedSymbolCounter,
 ) -> Result<String, ()> {
     let l = full_init.len();
@@ -296,7 +323,7 @@ pub fn full_initializer_to_local_lines(
             ii = ii % backward_prod[j];
         }
 
-        let to_handle = get_pointer_to_element_int_idx(&mut lines, array, idx, nsc)?;
+        let to_handle = get_pointer_to_element_int_idx(&mut lines, array, idx, scopes, nsc)?;
         append_line(
             &mut lines,
             &format!("  store {}, {}", from_handle, to_handle),

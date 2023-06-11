@@ -1,0 +1,156 @@
+decl @getint(): i32
+
+decl @getch(): i32
+
+decl @getarray(*i32): i32
+
+decl @putint(i32)
+
+decl @putch(i32)
+
+decl @putarray(i32, *i32)
+
+decl @starttime()
+
+decl @stoptime()
+
+fun @f(%0: *[i32, 5]): i32 {
+%entry:
+  @arr_1 = alloc *[i32, 5]
+  store %0, @arr_1
+  %1 = load @arr_1
+  %array_ptr_1 = getptr %1, 1
+  %array_ptr_2 = getelemptr %array_ptr_1, 2
+  %2 = load %array_ptr_2
+  ret %2
+}
+ 
+fun @main(): i32 {
+%entry:
+  @arr_2 = alloc [[[i32, 5], 3], 2]
+  %array_ptr_3 = getelemptr @arr_2, 0
+  %array_ptr_4 = getelemptr %array_ptr_3, 0
+  %array_ptr_5 = getelemptr %array_ptr_4, 0
+  store 0, %array_ptr_5
+  %array_ptr_6 = getelemptr @arr_2, 0
+  %array_ptr_7 = getelemptr %array_ptr_6, 0
+  %array_ptr_8 = getelemptr %array_ptr_7, 1
+  store 1, %array_ptr_8
+  %array_ptr_9 = getelemptr @arr_2, 0
+  %array_ptr_10 = getelemptr %array_ptr_9, 0
+  %array_ptr_11 = getelemptr %array_ptr_10, 2
+  store 2, %array_ptr_11
+  %array_ptr_12 = getelemptr @arr_2, 0
+  %array_ptr_13 = getelemptr %array_ptr_12, 0
+  %array_ptr_14 = getelemptr %array_ptr_13, 3
+  store 3, %array_ptr_14
+  %array_ptr_15 = getelemptr @arr_2, 0
+  %array_ptr_16 = getelemptr %array_ptr_15, 0
+  %array_ptr_17 = getelemptr %array_ptr_16, 4
+  store 4, %array_ptr_17
+  %array_ptr_18 = getelemptr @arr_2, 0
+  %array_ptr_19 = getelemptr %array_ptr_18, 1
+  %array_ptr_20 = getelemptr %array_ptr_19, 0
+  store 5, %array_ptr_20
+  %array_ptr_21 = getelemptr @arr_2, 0
+  %array_ptr_22 = getelemptr %array_ptr_21, 1
+  %array_ptr_23 = getelemptr %array_ptr_22, 1
+  store 6, %array_ptr_23
+  %array_ptr_24 = getelemptr @arr_2, 0
+  %array_ptr_25 = getelemptr %array_ptr_24, 1
+  %array_ptr_26 = getelemptr %array_ptr_25, 2
+  store 0, %array_ptr_26
+  %array_ptr_27 = getelemptr @arr_2, 0
+  %array_ptr_28 = getelemptr %array_ptr_27, 1
+  %array_ptr_29 = getelemptr %array_ptr_28, 3
+  store 0, %array_ptr_29
+  %array_ptr_30 = getelemptr @arr_2, 0
+  %array_ptr_31 = getelemptr %array_ptr_30, 1
+  %array_ptr_32 = getelemptr %array_ptr_31, 4
+  store 0, %array_ptr_32
+  %array_ptr_33 = getelemptr @arr_2, 0
+  %array_ptr_34 = getelemptr %array_ptr_33, 2
+  %array_ptr_35 = getelemptr %array_ptr_34, 0
+  store 7, %array_ptr_35
+  %array_ptr_36 = getelemptr @arr_2, 0
+  %array_ptr_37 = getelemptr %array_ptr_36, 2
+  %array_ptr_38 = getelemptr %array_ptr_37, 1
+  store 0, %array_ptr_38
+  %array_ptr_39 = getelemptr @arr_2, 0
+  %array_ptr_40 = getelemptr %array_ptr_39, 2
+  %array_ptr_41 = getelemptr %array_ptr_40, 2
+  store 0, %array_ptr_41
+  %array_ptr_42 = getelemptr @arr_2, 0
+  %array_ptr_43 = getelemptr %array_ptr_42, 2
+  %array_ptr_44 = getelemptr %array_ptr_43, 3
+  store 0, %array_ptr_44
+  %array_ptr_45 = getelemptr @arr_2, 0
+  %array_ptr_46 = getelemptr %array_ptr_45, 2
+  %array_ptr_47 = getelemptr %array_ptr_46, 4
+  store 0, %array_ptr_47
+  %array_ptr_48 = getelemptr @arr_2, 1
+  %array_ptr_49 = getelemptr %array_ptr_48, 0
+  %array_ptr_50 = getelemptr %array_ptr_49, 0
+  store 0, %array_ptr_50
+  %array_ptr_51 = getelemptr @arr_2, 1
+  %array_ptr_52 = getelemptr %array_ptr_51, 0
+  %array_ptr_53 = getelemptr %array_ptr_52, 1
+  store 0, %array_ptr_53
+  %array_ptr_54 = getelemptr @arr_2, 1
+  %array_ptr_55 = getelemptr %array_ptr_54, 0
+  %array_ptr_56 = getelemptr %array_ptr_55, 2
+  store 0, %array_ptr_56
+  %array_ptr_57 = getelemptr @arr_2, 1
+  %array_ptr_58 = getelemptr %array_ptr_57, 0
+  %array_ptr_59 = getelemptr %array_ptr_58, 3
+  store 0, %array_ptr_59
+  %array_ptr_60 = getelemptr @arr_2, 1
+  %array_ptr_61 = getelemptr %array_ptr_60, 0
+  %array_ptr_62 = getelemptr %array_ptr_61, 4
+  store 0, %array_ptr_62
+  %array_ptr_63 = getelemptr @arr_2, 1
+  %array_ptr_64 = getelemptr %array_ptr_63, 1
+  %array_ptr_65 = getelemptr %array_ptr_64, 0
+  store 0, %array_ptr_65
+  %array_ptr_66 = getelemptr @arr_2, 1
+  %array_ptr_67 = getelemptr %array_ptr_66, 1
+  %array_ptr_68 = getelemptr %array_ptr_67, 1
+  store 0, %array_ptr_68
+  %array_ptr_69 = getelemptr @arr_2, 1
+  %array_ptr_70 = getelemptr %array_ptr_69, 1
+  %array_ptr_71 = getelemptr %array_ptr_70, 2
+  store 0, %array_ptr_71
+  %array_ptr_72 = getelemptr @arr_2, 1
+  %array_ptr_73 = getelemptr %array_ptr_72, 1
+  %array_ptr_74 = getelemptr %array_ptr_73, 3
+  store 0, %array_ptr_74
+  %array_ptr_75 = getelemptr @arr_2, 1
+  %array_ptr_76 = getelemptr %array_ptr_75, 1
+  %array_ptr_77 = getelemptr %array_ptr_76, 4
+  store 0, %array_ptr_77
+  %array_ptr_78 = getelemptr @arr_2, 1
+  %array_ptr_79 = getelemptr %array_ptr_78, 2
+  %array_ptr_80 = getelemptr %array_ptr_79, 0
+  store 0, %array_ptr_80
+  %array_ptr_81 = getelemptr @arr_2, 1
+  %array_ptr_82 = getelemptr %array_ptr_81, 2
+  %array_ptr_83 = getelemptr %array_ptr_82, 1
+  store 0, %array_ptr_83
+  %array_ptr_84 = getelemptr @arr_2, 1
+  %array_ptr_85 = getelemptr %array_ptr_84, 2
+  %array_ptr_86 = getelemptr %array_ptr_85, 2
+  store 0, %array_ptr_86
+  %array_ptr_87 = getelemptr @arr_2, 1
+  %array_ptr_88 = getelemptr %array_ptr_87, 2
+  %array_ptr_89 = getelemptr %array_ptr_88, 3
+  store 0, %array_ptr_89
+  %array_ptr_90 = getelemptr @arr_2, 1
+  %array_ptr_91 = getelemptr %array_ptr_90, 2
+  %array_ptr_92 = getelemptr %array_ptr_91, 4
+  store 0, %array_ptr_92
+  %array_ptr_93 = getelemptr @arr_2, 0
+  %3 = getelemptr %array_ptr_93, 0
+  %4 = call @f(%3)
+  ret %4
+}
+ 

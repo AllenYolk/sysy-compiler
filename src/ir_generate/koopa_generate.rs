@@ -50,14 +50,14 @@ impl KoopaTextGenerate for CompUnit {
         append_line(lines, "decl @starttime()\n");
         append_line(lines, "decl @stoptime()\n");
         // put these functions into the global scope
-        scopes.add_function("getint", "@getint", false)?;
-        scopes.add_function("getch", "@getch", false)?;
-        scopes.add_function("getarray", "@getarray", false)?;
-        scopes.add_function("putint", "@putint", true)?;
-        scopes.add_function("putch", "@putch", true)?;
-        scopes.add_function("putarray", "@putarray", true)?;
-        scopes.add_function("starttime", "@starttime", true)?;
-        scopes.add_function("stoptime", "@stoptime", true)?;
+        scopes.add_function("getint", "@getint", false, Vec::new())?;
+        scopes.add_function("getch", "@getch", false, Vec::new())?;
+        scopes.add_function("getarray", "@getarray", false, vec![true])?;
+        scopes.add_function("putint", "@putint", true, vec![false])?;
+        scopes.add_function("putch", "@putch", true, vec![false])?;
+        scopes.add_function("putarray", "@putarray", true, vec![false, true])?;
+        scopes.add_function("starttime", "@starttime", true, Vec::new())?;
+        scopes.add_function("stoptime", "@stoptime", true, Vec::new())?;
 
         // generate function definitions
         for item in self.items.iter() {
@@ -80,6 +80,8 @@ impl KoopaTextGenerate for FuncDef {
         tsm: &mut TempSymbolManager,
         nsc: &mut NamedSymbolCounter,
     ) -> Result<String, ()> {
+        scopes.clear_cur_func_params();
+
         // function return type
         let mut ft = self
             .func_type
@@ -90,25 +92,40 @@ impl KoopaTextGenerate for FuncDef {
 
         // function name
         let func_name = format!("@{}", self.ident);
-        scopes.add_function(&self.ident, &func_name, ft.is_empty())?;
 
         // function parameters
         let mut param_text = String::new();
         let mut func_param_reallocation_text = String::new();
+        let mut array_param = Vec::new();
         for (i, param) in self.params.iter().enumerate() {
             let formal_param_symbol = tsm.new_temp_symbol();
             let param_ident = param.generate(&mut String::new(), scopes, tsm, nsc)?;
             let reallocated_param_symbol =
                 nsc.inc_and_get_named_symbol(&format!("@{}", param_ident))?;
 
+            let type_str = match param.dims {
+                None => {
+                    array_param.push(false);
+                    String::from("i32")
+                },
+                Some(ref dims) => {
+                    array_param.push(true);
+                    let dims: Vec<i32> = dims
+                        .iter()
+                        .map(|const_exp| const_exp.solve(scopes).unwrap())
+                        .collect();
+                    format!("*{}", generate_allocate_dims(&dims, 0))
+                }
+            };
+
             if i != 0 {
                 param_text.push_str(", ")
             }
-            param_text.push_str(&format!("{}: i32", formal_param_symbol));
+            param_text.push_str(&format!("{}: {}", formal_param_symbol, type_str));
 
             append_line(
                 &mut func_param_reallocation_text,
-                &format!("  {} = alloc i32", reallocated_param_symbol),
+                &format!("  {} = alloc {}", reallocated_param_symbol, type_str),
             );
             append_line(
                 &mut func_param_reallocation_text,
@@ -117,8 +134,16 @@ impl KoopaTextGenerate for FuncDef {
                     formal_param_symbol, reallocated_param_symbol
                 ),
             );
-            scopes.add_value_to_buffer(&param_ident, &reallocated_param_symbol, false);
+            let n_array_dim = if let Some(dims) = &param.dims {
+                Some(dims.len() + 1)
+            } else {
+                None
+            };
+            scopes.add_value_to_buffer(&param_ident, &reallocated_param_symbol, false, n_array_dim);
+            scopes.add_cur_func_param(&reallocated_param_symbol);
         }
+
+        scopes.add_function(&self.ident, &func_name, ft.is_empty(), array_param)?;
 
         // function body
         let mut body_text = String::new();
@@ -407,11 +432,11 @@ impl KoopaTextGenerate for ConstDef {
             // Constant scalars, both global and local.
             // No code line is generated, and the symbol will be replaced directly by its value.
             let init = self.init.generate(&mut String::new(), scopes, tsm, nsc)?; // Get the initial value.
-            scopes.add_value(&self.ident, &init, true, false)?;
+            scopes.add_value(&self.ident, &init, true, None)?;
         } else {
             // Constant arrays.
             let symbol = nsc.inc_and_get_named_symbol(&format!("@{}", self.ident))?;
-            scopes.add_value(&self.ident, &symbol, true, true)?;
+            scopes.add_value(&self.ident, &symbol, true, Some(self.dims.len()))?;
 
             let dims: Vec<i32> = self
                 .dims
@@ -431,7 +456,7 @@ impl KoopaTextGenerate for ConstDef {
             } else {
                 // Local constant arrays.
                 append_line(lines, &format!("  {} = alloc {}", symbol, dims_str));
-                let new_lines = full_initializer_to_local_lines(&symbol, &full_init, &dims, nsc)?;
+                let new_lines = full_initializer_to_local_lines(&symbol, &full_init, &dims, scopes, nsc)?;
                 append_line(lines, &new_lines);
             }
         }
@@ -484,7 +509,7 @@ impl KoopaTextGenerate for VarDef {
         let symbol_name = nsc.inc_and_get_named_symbol(&format!("@{}", &self.ident))?;
 
         if self.dims.is_empty() {
-            scopes.add_value(&self.ident, &symbol_name, false, false)?;
+            scopes.add_value(&self.ident, &symbol_name, false, None)?;
 
             if scopes.now_global() {
                 // global scalars
@@ -511,7 +536,7 @@ impl KoopaTextGenerate for VarDef {
                 }
             }
         } else {
-            scopes.add_value(&self.ident, &symbol_name, false, true)?;
+            scopes.add_value(&self.ident, &symbol_name, false, Some(self.dims.len()))?;
 
             let dims: Vec<i32> = self
                 .dims
@@ -553,6 +578,7 @@ impl KoopaTextGenerate for VarDef {
                         &symbol_name,
                         &full_init_content,
                         &dims,
+                        scopes,
                         nsc,
                     )?;
                     append_line(lines, &new_lines);
@@ -887,17 +913,29 @@ impl KoopaTextGenerate for UnaryExp {
                 let FunctionInfo {
                     symbol: func_symbol,
                     return_void,
+                    array_param,
                 } = scopes.get_function(&ident)?;
 
                 let mut param_text = String::new();
                 for (i, param) in params.iter().enumerate() {
                     let mut param_generation_text = String::new();
                     let param_var = param.generate(&mut param_generation_text, scopes, tsm, nsc)?;
+                    let real_param_var = if array_param[i] {
+                        // If the parameter is an array, we need to pass a pointer to it.
+                        // That is, we should pass the address of its first element.
+                        let new_var = tsm.new_temp_symbol();
+                        append_line(&mut param_generation_text, &format!("  {} = getelemptr {}, 0", new_var, param_var));
+                        new_var
+                    } else {
+                        // scalar function parameter
+                        param_var
+                    };
+            
                     append_line(lines, &param_generation_text);
                     if i > 0 {
                         param_text.push_str(", ");
                     }
-                    param_text.push_str(&param_var);
+                    param_text.push_str(&real_param_var);
                 }
 
                 if return_void {
@@ -956,14 +994,25 @@ impl KoopaTextGenerate for PrimaryExp {
                 let symbol = lval.generate(&mut pre, scopes, tsm, nsc)?;
                 append_line(lines, &pre);
 
-                if let SymbolTableValue::Const(_) = scopes.get_value(&lval.ident)? {
-                    // immediate value
-                    Ok(symbol)
-                } else {
-                    // pointer
-                    let new_temp_symbol = tsm.new_temp_symbol();
-                    append_line(lines, &format!("  {} = load {}", new_temp_symbol, symbol));
-                    Ok(new_temp_symbol)
+                match scopes.get_value(&lval.ident)? {
+                    SymbolTableValue::Const(_) => Ok(symbol),
+                    SymbolTableValue::Var(_) => {
+                        let new_temp_symbol = tsm.new_temp_symbol();
+                        append_line(lines, &format!("  {} = load {}", new_temp_symbol, symbol));
+                        Ok(new_temp_symbol)
+                    }
+                    SymbolTableValue::Array(_, nd) => {
+                        dbg!(lval.idx.len(), nd);
+                        if lval.idx.len() < nd { 
+                            // Must be a parameter when calling a function.
+                            // We don't have to load the data in this case!
+                            Ok(symbol)
+                        } else {
+                            let new_temp_symbol = tsm.new_temp_symbol();
+                            append_line(lines, &format!("  {} = load {}", new_temp_symbol, symbol));
+                            Ok(new_temp_symbol)
+                        }
+                    }
                 }
             }
         }
@@ -986,7 +1035,7 @@ impl KoopaTextGenerate for LVal {
         match scopes.get_value(&self.ident)? {
             SymbolTableValue::Var(v) => Ok(v),
             SymbolTableValue::Const(c) => Ok(c),
-            SymbolTableValue::Array(a) => {
+            SymbolTableValue::Array(a, _) => {
                 get_pointer_to_element_exp_idx(lines, &a, &self.idx, scopes, tsm, nsc)
             }
         }

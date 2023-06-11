@@ -27,12 +27,13 @@ pub enum FuncType {
     Void,
 }
 
-/// FuncFParam ::= BType IDENT;
+/// FuncFParam ::= BType IDENT [ "[" "]" { "[" ConstExp "]" } ];
 /// BType ::= "int"
 #[derive(Debug)]
 pub struct FuncFParam {
     // there's only `int` type in SysY!
     pub ident: String,
+    pub dims: Option<Vec<ConstExp>>,
 }
 
 #[derive(Debug)]

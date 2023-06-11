@@ -49,10 +49,10 @@ FuncDef: FuncDef = {
     },
 }
 
-/// FuncFParam ::= BType IDENT;
+/// FuncFParam ::= BType IDENT [ "[" "]" { "[" ConstExp "]" } ];
 /// BType ::= "int"
 FuncFParam: FuncFParam = {
-    "int" <ident: Ident> => FuncFParam { ident }
+    "int" <ident: Ident> <dims: ( "[" "]" <( "[" <ConstExp> "]" )*> )?> => FuncFParam { ident, dims }
 }
 
 // use the `*` macro of `lalrpop`

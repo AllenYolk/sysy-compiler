@@ -5,7 +5,8 @@ use std::collections::HashMap;
 pub struct FunctionInfo {
     pub symbol: String,
     pub return_void: bool,
-    // there's no need to store parameter types!!!
+    pub array_param: Vec<bool>,
+    // there's no need to store detailed parameter types!!!
 }
 
 /// The value of a symbol in the symbol table.
@@ -19,7 +20,7 @@ pub struct FunctionInfo {
 pub enum SymbolTableValue {
     Const(String),
     Var(String),
-    Array(String),
+    Array(String, usize),
 }
 
 /// The three labels defined for a `while` loop.
@@ -46,6 +47,8 @@ pub struct Scopes {
     values_buffer: Vec<(String, SymbolTableValue)>,
     /// Stacked loop information.
     loops: Vec<LoopLabel>,
+    /// The parameter list of the current function.
+    cur_func_params: Vec<String>,
 }
 
 #[allow(dead_code)]
@@ -57,6 +60,7 @@ impl Scopes {
             values: vec![HashMap::new()],
             values_buffer: Vec::new(),
             loops: Vec::new(),
+            cur_func_params: Vec::new(),
         }
     }
 
@@ -72,12 +76,14 @@ impl Scopes {
         identifier: &str,
         symbol: &str,
         return_void: bool,
+        array_param: Vec<bool>,
     ) -> Result<(), ()> {
         if let Some(_) = self.functions.insert(
             identifier.into(),
             FunctionInfo {
                 symbol: symbol.into(),
                 return_void,
+                array_param,
             },
         ) {
             return Err(());
@@ -85,11 +91,15 @@ impl Scopes {
         Ok(())
     }
 
-    pub fn add_value_to_buffer(&mut self, identifier: &str, symbol: &str, is_const: bool) {
-        let v = if is_const {
-            SymbolTableValue::Const(symbol.into())
+    pub fn add_value_to_buffer(&mut self, identifier: &str, symbol: &str, is_const: bool, n_array_dim: Option<usize>) {
+        let v = if let Some(nd) = n_array_dim {
+            SymbolTableValue::Array(symbol.into(), nd)
         } else {
-            SymbolTableValue::Var(symbol.into())
+            if is_const {
+                SymbolTableValue::Const(symbol.into())
+            } else {
+                SymbolTableValue::Var(symbol.into())
+            }
         };
         self.values_buffer.push((identifier.into(), v));
     }
@@ -138,14 +148,14 @@ impl Scopes {
         identifier: &str,
         symbol: &str,
         is_const: bool,
-        is_array: bool,
+        n_array_dim: Option<usize>,
     ) -> Result<(), ()> {
         let Some(symtab) = self.values.last_mut() else {
             return Err(());
         };
 
-        let v = if is_array {
-            SymbolTableValue::Array(symbol.into())
+        let v = if let Some(nd) = n_array_dim {
+            SymbolTableValue::Array(symbol.into(), nd)
         } else {
             if is_const {
                 SymbolTableValue::Const(symbol.into())
@@ -188,5 +198,17 @@ impl Scopes {
     /// This method can help us distinguishing local declarations from global ones!
     pub fn now_global(&self) -> bool {
         self.values.len() <= 1
+    }
+
+    pub fn add_cur_func_param(&mut self, param: &str) {
+        self.cur_func_params.push(param.into());
+    }
+
+    pub fn clear_cur_func_params(&mut self) {
+        self.cur_func_params.clear();
+    }
+
+    pub fn has_cur_func_param(&self, param: &str) -> bool {
+        self.cur_func_params.contains(&param.into())
     }
 }
