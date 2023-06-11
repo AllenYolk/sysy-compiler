@@ -135,7 +135,7 @@ impl FunctionScan for FunctionData {
                         // the instruction yields a new value
                         value_slots.insert(inst_val, o);
                         match inst_val_data.kind() {
-                            ValueKind::GetElemPtr(_) => {
+                            ValueKind::GetElemPtr(_) | ValueKind::GetPtr(_) => {
                                 contain_pointer.insert(inst_val, true);
                             }
                             _ => {
@@ -198,6 +198,14 @@ impl FunctionScan for ValueData {
                 Some(self),
             ),
             ValueKind::Binary(val) => val.scan(
+                value_slots,
+                contain_pointer,
+                n_local_var,
+                n_param_on_stack,
+                has_call,
+                Some(self),
+            ),
+            ValueKind::GetPtr(val) => val.scan(
                 value_slots,
                 contain_pointer,
                 n_local_var,
@@ -305,6 +313,23 @@ impl FunctionScan for values::Store {
 }
 
 impl FunctionScan for values::GetElemPtr {
+    type Ret = Option<usize>;
+
+    fn scan(
+        &self,
+        _value_slots: &mut HashMap<Value, usize>,
+        _contain_pointer: &mut HashMap<Value, bool>,
+        n_local_var: &mut usize,
+        _n_param_on_stack: &mut usize,
+        _has_call: &mut bool,
+        _value_data: Option<&ValueData>,
+    ) -> Result<Self::Ret, ()> {
+        *n_local_var += 1;
+        Ok(Some(*n_local_var - 1))
+    }
+}
+
+impl FunctionScan for values::GetPtr {
     type Ret = Option<usize>;
 
     fn scan(

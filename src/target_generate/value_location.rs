@@ -122,7 +122,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn move_to_test() {
+    fn move_content_to_test() {
         assert_eq!(
             ValueLocation::Imm("1".into()).move_content_to(ValueLocation::Reg("a0".into())),
             "  li a0, 1"

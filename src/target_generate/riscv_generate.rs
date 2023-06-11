@@ -226,6 +226,8 @@ impl RiscvGenerate for ValueData {
             ValueKind::Store(val) => val.generate(lines, cxt),
             // get element pointer
             ValueKind::GetElemPtr(val) => val.generate(lines, cxt),
+            // get pointer
+            ValueKind::GetPtr(val) => val.generate(lines, cxt),
             // binary operation
             ValueKind::Binary(val) => val.generate(lines, cxt),
             // branch operation
@@ -370,6 +372,35 @@ impl RiscvGenerate for values::GetElemPtr {
         append_line(lines, &line1);
         append_line(lines, &idx.move_content_to_reg("t1"));
         append_line(lines, &format!("  li t2, {}", base_type_size));
+        append_line(lines, "  mul t1, t1, t2");
+        append_line(lines, "  add t0, t0, t1");
+        append_line(lines, "  sw t0, <tar>");
+
+        Ok(ValueLocation::PlaceHolder("<tar>".to_string()))
+    }
+}
+
+impl RiscvGenerate for values::GetPtr {
+    type Ret = ValueLocation;
+    
+    fn generate(&self, lines: &mut String, cxt: &mut ProgramContext) -> Result<Self::Ret, ()> {
+        // get two locations
+        let src = self.src().generate(&mut String::new(), cxt)?;
+        let idx = self.index().generate(&mut String::new(), cxt)?;
+
+        let Some(vd) = cxt.get_value_data_locally_or_globally(self.src()) else {
+            return Err(());
+        };
+        dbg!(vd.ty());
+        let TypeKind::Pointer(ptr_base)  = vd.ty().kind() else {
+            return Err(());
+        };
+        let ptr_base_size = ptr_base.size();
+
+        // compute the base address to register t0
+        append_line(lines, &src.move_content_to_reg("t0"));
+        append_line(lines, &idx.move_content_to_reg("t1"));
+        append_line(lines, &format!("  li t2, {}", ptr_base_size));
         append_line(lines, "  mul t1, t1, t2");
         append_line(lines, "  add t0, t0, t1");
         append_line(lines, "  sw t0, <tar>");

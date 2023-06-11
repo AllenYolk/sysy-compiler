@@ -1002,7 +1002,6 @@ impl KoopaTextGenerate for PrimaryExp {
                         Ok(new_temp_symbol)
                     }
                     SymbolTableValue::Array(_, nd) => {
-                        dbg!(lval.idx.len(), nd);
                         if lval.idx.len() < nd { 
                             // Must be a parameter when calling a function.
                             // We don't have to load the data in this case!
