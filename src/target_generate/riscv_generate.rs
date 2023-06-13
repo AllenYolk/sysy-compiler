@@ -433,7 +433,7 @@ impl RiscvGenerate for values::Binary {
             }
             BinaryOp::Le => {
                 append_line(lines, "  sgt t0, t0, t1");
-                append_line(lines, "  seqz, t0, t0");
+                append_line(lines, "  seqz t0, t0");
             }
             op @ _ => {
                 let verb = match op {
@@ -486,7 +486,7 @@ impl RiscvGenerate for values::Branch {
         append_line(
             lines,
             &format!(
-                "  beqz t0, {}",
+                "  bnez t0, {}",
                 true_bb_name.replace("%", "").replace("@", "")
             ),
         );
