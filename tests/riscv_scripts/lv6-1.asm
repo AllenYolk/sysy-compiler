@@ -8,7 +8,7 @@ entry:
   lw t0, 0(sp)
   sw t0, 4(sp)
   lw t0, 4(sp)
-  beqz t0, if_then_1
+  bnez t0, if_then_1
   j if_else_1
 if_then_1:
   lw t0, 0(sp)
@@ -32,7 +32,7 @@ if_then_1:
   lw t0, 28(sp)
   sw t0, 32(sp)
   lw t0, 32(sp)
-  beqz t0, if_then_2
+  bnez t0, if_then_2
   j if_else_2
 if_else_1:
   li t0, 4
@@ -54,7 +54,7 @@ if_then_2:
   slt t0, t0, t1
   sw t0, 48(sp)
   lw t0, 48(sp)
-  beqz t0, if_then_3
+  bnez t0, if_then_3
   j if_else_3
 if_else_2:
   lw t0, 16(sp)

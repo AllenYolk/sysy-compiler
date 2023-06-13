@@ -17,7 +17,7 @@ while_entry_1:
   seqz t0, t0
   sw t0, 12(sp)
   lw t0, 12(sp)
-  beqz t0, while_body_1
+  bnez t0, while_body_1
   j while_end_1
 while_body_1:
   j while_entry_2
@@ -35,7 +35,7 @@ while_entry_2:
   slt t0, t0, t1
   sw t0, 24(sp)
   lw t0, 24(sp)
-  beqz t0, while_body_2
+  bnez t0, while_body_2
   j while_end_2
 while_body_2:
   lw t0, 4(sp)
@@ -45,7 +45,7 @@ while_body_2:
   rem t0, t0, t1
   sw t0, 32(sp)
   lw t0, 32(sp)
-  beqz t0, if_then_1
+  bnez t0, if_then_1
   j if_else_1
 while_end_2:
   j while_entry_1

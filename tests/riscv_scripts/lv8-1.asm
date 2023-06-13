@@ -43,7 +43,7 @@ entry:
   sgt t0, t0, t1
   sw t0, 20(sp)
   lw t0, 20(sp)
-  beqz t0, if_then_1
+  bnez t0, if_then_1
   j if_else_1
 if_then_1:
   li t0, 5

@@ -153,7 +153,12 @@ impl KoopaTextGenerate for FuncDef {
         let Some(last_line) = body_text.split("\n").last() else {
             return Err(());
         };
-        if !last_line.contains("ret") {
+        if last_line.contains("%after_return") {
+            let Some(idx) = body_text.rfind("%after_return") else {
+                return Err(());
+            };
+            body_text = body_text[..(idx-1)].to_string();
+        } else if !last_line.contains("ret") {
             append_line(&mut body_text, "  ret");
         }
 
@@ -355,6 +360,7 @@ impl KoopaTextGenerate for Stmt {
                 append_line(lines, &format!("\n{}:", new_label));
             }
             Self::Return(exp) => {
+                // `ret` indicates the end of a basic block!!!
                 let mut pre = String::new();
                 if let Some(expression) = exp {
                     let ret = expression.generate(&mut pre, scopes, tsm, nsc)?;
@@ -363,6 +369,8 @@ impl KoopaTextGenerate for Stmt {
                     append_line(&mut pre, "  ret");
                 }
                 append_line(lines, &pre);
+                let bb_label = nsc.inc_and_get_named_symbol("%after_return")?;
+                append_line(lines, &format!("{}:", bb_label));
             }
         }
 

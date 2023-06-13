@@ -14,7 +14,7 @@ entry:
   slt t0, t0, t1
   sw t0, 12(sp)
   lw t0, 12(sp)
-  beqz t0, if_then_1
+  bnez t0, if_then_1
   j if_else_1
 if_then_1:
   j while_entry_1
@@ -28,7 +28,7 @@ while_entry_1:
   slt t0, t0, t1
   sw t0, 20(sp)
   lw t0, 20(sp)
-  beqz t0, while_body_1
+  bnez t0, while_body_1
   j while_end_1
 if_end_1:
   lw t0, 4(sp)
@@ -44,7 +44,7 @@ while_body_1:
   slt t0, t0, t1
   sw t0, 32(sp)
   lw t0, 32(sp)
-  beqz t0, if_then_2
+  bnez t0, if_then_2
   j if_else_2
 while_end_1:
   j if_end_1

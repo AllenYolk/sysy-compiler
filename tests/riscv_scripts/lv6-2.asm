@@ -17,13 +17,13 @@ entry:
   lw t0, 16(sp)
   sw t0, 8(sp)
   lw t0, 16(sp)
-  beqz t0, or_end_1
+  bnez t0, or_end_1
   j or_rhs_1
 or_end_1:
   lw t0, 8(sp)
   sw t0, 20(sp)
   lw t0, 20(sp)
-  beqz t0, if_then_1
+  bnez t0, if_then_1
   j if_else_1
 or_rhs_1:
   lw t0, 4(sp)
@@ -64,7 +64,7 @@ if_else_1:
   lw t0, 56(sp)
   sw t0, 44(sp)
   lw t0, 56(sp)
-  beqz t0, or_end_2
+  bnez t0, or_end_2
   j or_rhs_2
 if_end_1:
   lw t0, 0(sp)
@@ -94,7 +94,7 @@ or_rhs_2:
   lw t0, 80(sp)
   sw t0, 68(sp)
   lw t0, 80(sp)
-  beqz t0, and_rhs_1
+  bnez t0, and_rhs_1
   j and_end_1
 and_rhs_1:
   lw t0, 4(sp)
