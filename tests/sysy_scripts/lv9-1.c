@@ -1,6 +1,6 @@
-int arr[65536];
+int arr[6];
 
 int main() {
-  int arr[4096] = {1};
+  int arr[4] = {1};
   return arr[0];
 }
