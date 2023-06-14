@@ -110,9 +110,9 @@ impl ValueLocation {
         }
     }
 
-    /// Generate the instruction (a `String`) that treat the value as the i-th function argument.
-    pub fn act_as_function_arg(&self, i: usize, stack_frame_size: usize) -> String {
-        let dest = function_arg_location(i, stack_frame_size);
+    /// Generate the instruction (a `String`) that treat the value as the i-th argument for a function being called now.
+    pub fn act_as_function_arg(&self, i: usize) -> String {
+        let dest = function_arg_location(i, 0, true);
         self.move_content_to(dest)
     }
 }
@@ -182,183 +182,183 @@ mod tests {
     #[test]
     fn act_as_function_arg_test() {
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(0, 16),
+            ValueLocation::Imm("1".into()).act_as_function_arg(0),
             "  li a0, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(1, 16),
+            ValueLocation::Imm("1".into()).act_as_function_arg(1),
             "  li a1, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(2, 16),
+            ValueLocation::Imm("1".into()).act_as_function_arg(2),
             "  li a2, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(3, 16),
+            ValueLocation::Imm("1".into()).act_as_function_arg(3),
             "  li a3, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(4, 16),
+            ValueLocation::Imm("1".into()).act_as_function_arg(4),
             "  li a4, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(5, 16),
+            ValueLocation::Imm("1".into()).act_as_function_arg(5),
             "  li a5, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(6, 16),
+            ValueLocation::Imm("1".into()).act_as_function_arg(6),
             "  li a6, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(7, 16),
+            ValueLocation::Imm("1".into()).act_as_function_arg(7),
             "  li a7, 1"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(8, 16),
-            "  li t0, 1\n  sw t0, 16(sp)"
+            ValueLocation::Imm("1".into()).act_as_function_arg(8),
+            "  li t0, 1\n  sw t0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(9, 16),
-            "  li t0, 1\n  sw t0, 20(sp)"
+            ValueLocation::Imm("1".into()).act_as_function_arg(9),
+            "  li t0, 1\n  sw t0, 4(sp)"
         );
         assert_eq!(
-            ValueLocation::Imm("1".into()).act_as_function_arg(10, 16),
-            "  li t0, 1\n  sw t0, 24(sp)"
+            ValueLocation::Imm("1".into()).act_as_function_arg(10),
+            "  li t0, 1\n  sw t0, 8(sp)"
         );
 
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(0, 16),
+            ValueLocation::Reg("a0".into()).act_as_function_arg(0),
             "  mv a0, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(1, 16),
+            ValueLocation::Reg("a0".into()).act_as_function_arg(1),
             "  mv a1, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(2, 16),
+            ValueLocation::Reg("a0".into()).act_as_function_arg(2),
             "  mv a2, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(3, 16),
+            ValueLocation::Reg("a0".into()).act_as_function_arg(3),
             "  mv a3, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(4, 16),
+            ValueLocation::Reg("a0".into()).act_as_function_arg(4),
             "  mv a4, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(5, 16),
+            ValueLocation::Reg("a0".into()).act_as_function_arg(5),
             "  mv a5, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(6, 16),
+            ValueLocation::Reg("a0".into()).act_as_function_arg(6),
             "  mv a6, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(7, 16),
+            ValueLocation::Reg("a0".into()).act_as_function_arg(7),
             "  mv a7, a0"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(8, 16),
-            "  sw a0, 16(sp)"
+            ValueLocation::Reg("a0".into()).act_as_function_arg(8),
+            "  sw a0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(9, 16),
-            "  sw a0, 20(sp)"
+            ValueLocation::Reg("a0".into()).act_as_function_arg(9),
+            "  sw a0, 4(sp)"
         );
         assert_eq!(
-            ValueLocation::Reg("a0".into()).act_as_function_arg(10, 16),
-            "  sw a0, 24(sp)"
+            ValueLocation::Reg("a0".into()).act_as_function_arg(10),
+            "  sw a0, 8(sp)"
         );
 
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(0, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(0),
             "  lw a0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(1, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(1),
             "  lw a1, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(2, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(2),
             "  lw a2, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(3, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(3),
             "  lw a3, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(4, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(4),
             "  lw a4, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(5, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(5),
             "  lw a5, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(6, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(6),
             "  lw a6, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(7, 16),
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(7),
             "  lw a7, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(8, 16),
-            "  lw t0, 0(sp)\n  sw t0, 16(sp)"
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(8),
+            "  lw t0, 0(sp)\n  sw t0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(9, 16),
-            "  lw t0, 0(sp)\n  sw t0, 20(sp)"
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(9),
+            "  lw t0, 0(sp)\n  sw t0, 4(sp)"
         );
         assert_eq!(
-            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(10, 16),
-            "  lw t0, 0(sp)\n  sw t0, 24(sp)"
+            ValueLocation::Stack("0(sp)".into(),).act_as_function_arg(10),
+            "  lw t0, 0(sp)\n  sw t0, 8(sp)"
         );
 
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(0, 16),
+            ValueLocation::Global("a".into()).act_as_function_arg(0),
             "  la t0, a\n  lw a0, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(1, 16),
+            ValueLocation::Global("a".into()).act_as_function_arg(1),
             "  la t0, a\n  lw a1, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(2, 16),
+            ValueLocation::Global("a".into()).act_as_function_arg(2),
             "  la t0, a\n  lw a2, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(3, 16),
+            ValueLocation::Global("a".into()).act_as_function_arg(3),
             "  la t0, a\n  lw a3, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(4, 16),
+            ValueLocation::Global("a".into()).act_as_function_arg(4),
             "  la t0, a\n  lw a4, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(5, 16),
+            ValueLocation::Global("a".into()).act_as_function_arg(5),
             "  la t0, a\n  lw a5, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(6, 16),
+            ValueLocation::Global("a".into()).act_as_function_arg(6),
             "  la t0, a\n  lw a6, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(7, 16),
+            ValueLocation::Global("a".into()).act_as_function_arg(7),
             "  la t0, a\n  lw a7, 0(t0)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(8, 16),
-            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 16(sp)"
+            ValueLocation::Global("a".into()).act_as_function_arg(8),
+            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 0(sp)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(9, 16),
-            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 20(sp)"
+            ValueLocation::Global("a".into()).act_as_function_arg(9),
+            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 4(sp)"
         );
         assert_eq!(
-            ValueLocation::Global("a".into()).act_as_function_arg(10, 16),
-            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 24(sp)"
+            ValueLocation::Global("a".into()).act_as_function_arg(10),
+            "  la t0, a\n  lw t0, 0(t0)\n  sw t0, 8(sp)"
         );
     }
 }

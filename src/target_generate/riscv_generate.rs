@@ -529,12 +529,9 @@ impl RiscvGenerate for values::Call {
 
         // Prepare the arguments.
         let args = self.args();
-        let Some(stack_frame_size) = cxt.get_current_stack_frame_size() else {
-            return Err(());
-        };
         for (i, arg) in args.iter().enumerate() {
             let loc = arg.generate(&mut String::new(), cxt)?;
-            append_line(lines, &loc.act_as_function_arg(i, stack_frame_size));
+            append_line(lines, &loc.act_as_function_arg(i));
         }
 
         // Call the function.

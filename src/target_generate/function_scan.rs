@@ -73,7 +73,7 @@ impl FunctionScanResult {
             .collect();
         // we have to add the function parameters to the `value_locations` map
         for (i, param) in func_data.params().iter().enumerate() {
-            value_locations.insert(*param, function_arg_location(i, stack_frame_size));
+            value_locations.insert(*param, function_arg_location(i, stack_frame_size, false));
         }
 
         Ok(Self {
