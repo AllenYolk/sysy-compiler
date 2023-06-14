@@ -104,16 +104,27 @@ impl RiscvGenerate for FunctionData {
 
                 match loc {
                     ValueLocation::PlaceHolder(p) => {
+                        // the last instruction must be `sw`
                         let Some(real_loc) = cxt.get_value_location_local_or_global(inst_val) else{
                             return Err(());
                         };
-                        let real_loc_str = match real_loc {
-                            ValueLocation::Imm(s) => s,
-                            ValueLocation::Reg(s) => s,
-                            ValueLocation::Stack(s) => s,
+                        match real_loc {
+                            ValueLocation::Imm(s) | ValueLocation::Reg(s) => {
+                                new_lines = new_lines.replace(&p, &s);
+                            },
+                            ValueLocation::Stack(addr) => {
+                                let mut addr_lines = String::new();
+                                let valid_addr = get_valid_address(&addr, "t3", &mut addr_lines);
+                                new_lines = new_lines.replace(&p, &valid_addr);
+
+                                let new_line_vec = new_lines.split("\n").collect::<Vec<&str>>();
+                                let mut new_lines_but_last = new_line_vec[..(new_line_vec.len()-1)].join("\n");
+                                append_line(&mut new_lines_but_last, &addr_lines);
+                                append_line(&mut new_lines_but_last, new_line_vec[new_line_vec.len()-1]);
+                                new_lines = new_lines_but_last;
+                            },
                             _ => return Err(()),
-                        };
-                        new_lines = new_lines.replace(&p, &real_loc_str);
+                        }
                     }
                     _ => (),
                 }
@@ -132,19 +143,33 @@ impl RiscvGenerate for FunctionData {
         let mut pro = String::new();
         let mut epi = String::new();
         if sp_shift > 0 {
-            append_line(&mut pro, &format!("  addi sp, sp, -{}", sp_shift));
+            if sp_shift < 2048 {
+                append_line(&mut pro, &format!("  addi sp, sp, -{}", sp_shift));
+            } else {
+                append_line(&mut pro, &format!("  li t0, -{}", sp_shift));
+                append_line(&mut pro, &format!("  add sp, sp, t0"));
+            }
         }
         if let Some(ref ra_loc) = func_info.ra_slot_location {
             // there's a `call` in the function body, and we need to save the `ra` register
             if let ValueLocation::Stack(ref ra_addr) = ra_loc {
-                append_line(&mut pro, &format!("  sw ra, {}", ra_addr));
-                append_line(&mut epi, &format!("  lw ra, {}", ra_addr));
+                let mut ra_lines = String::new();
+                let valid_ra_addr = get_valid_address(ra_addr, "t3", &mut ra_lines);
+                append_line(&mut pro, &ra_lines);
+                append_line(&mut pro, &format!("  sw ra, {}", valid_ra_addr));
+                append_line(&mut epi, &ra_lines);
+                append_line(&mut epi, &format!("  lw ra, {}", valid_ra_addr));
             } else {
                 return Err(());
             }
         }
         if sp_shift > 0 {
-            append_line(&mut epi, &format!("  addi sp, sp, {}", sp_shift));
+            if sp_shift < 2048 {
+                append_line(&mut epi, &format!("  addi sp, sp, {}", sp_shift));
+            } else {
+                append_line(&mut epi, &format!("  li t0, {}", sp_shift));
+                append_line(&mut epi, &format!("  add sp, sp, t0"));
+            }
         }
         if pro.is_empty() {
             pro = "  # no prologue".to_string();

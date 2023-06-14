@@ -1,3 +1,5 @@
+use crate::tools::append_line;
+
 use super::function_call::function_arg_location;
 
 /// The location of a value.
@@ -22,6 +24,30 @@ pub enum ValueLocation {
     None,
 }
 
+fn extract_base_and_offset(addr: &str) -> Option<(String, i32)> {
+    let splitted_result: Vec<&str> = addr.split(|c| c == '(' || c == ')').collect();
+    if splitted_result.len() != 3 {
+        return None;
+    }
+    let offset = splitted_result[0].parse::<i32>().ok()?;
+    let base = splitted_result[1].to_string();
+    Some((base, offset))
+}
+
+pub fn get_valid_address(addr: &str, temp_reg: &str, lines: &mut String) -> String {
+    let Some((base, offset)) = extract_base_and_offset(addr) else {
+        return addr.to_string();
+    };
+
+    if offset < 2048 && offset >= -2048 {
+        addr.to_string()
+    } else {
+        append_line(lines, &format!("  li {}, {}", temp_reg, offset));
+        append_line(lines, &format!("  add {}, {}, {}", temp_reg, base, temp_reg));
+        format!("0({})", temp_reg)
+    }
+}
+
 impl ValueLocation {
     /// Generate the instruction (a `String`) that moves the value (with the location) to the given register.
     pub fn move_content_to_reg(&self, reg: &str) -> String {
@@ -33,7 +59,10 @@ impl ValueLocation {
                 format!("  mv {}, {}", reg, r)
             }
             Self::Stack(addr) => {
-                format!("  lw {}, {}", reg, addr)
+                let mut lines = String::new();
+                let addr = get_valid_address(addr, "t3", &mut lines);
+                append_line(&mut lines, &format!("  lw {}, {}", reg, addr));
+                lines
             }
             Self::Global(s) => {
                 format!("  la t0, {}\n  lw {}, 0(t0)", s, reg)
@@ -44,21 +73,27 @@ impl ValueLocation {
 
     /// Generate the instruction (a `String`) that moves the value (with the location) to the given stack address.
     pub fn move_content_to_stack(&self, addr: &str) -> String {
+        let mut lines = String::new();
+        let addr = get_valid_address(addr, "t3", &mut lines);
+
         match self {
             Self::Imm(val) => {
-                format!("  li t0, {}\n  sw t0, {}", val, addr)
+                append_line(&mut lines, &format!("  li t0, {}\n  sw t0, {}", val, addr));
             }
             Self::Reg(r) => {
-                format!("  sw {}, {}", r, addr)
+                append_line(&mut lines, &format!("  sw {}, {}", r, addr));
             }
             Self::Stack(addr2) => {
-                format!("  lw t0, {}\n  sw t0, {}", addr2, addr)
+                let addr2 = get_valid_address(addr2, "t4", &mut lines);
+                append_line(&mut lines, &format!("  lw t0, {}\n  sw t0, {}", addr2, addr));
             }
             Self::Global(s) => {
-                format!("  la t0, {}\n  lw t0, 0(t0)\n  sw t0, {}", s, addr)
+                append_line(&mut lines, &format!("  la t0, {}\n  lw t0, 0(t0)\n  sw t0, {}", s, addr));
             }
-            _ => String::new(),
+            _ => {},
         }
+
+        lines
     }
 
     pub fn move_content_to_global(&self, name: &str) -> String {
@@ -70,7 +105,10 @@ impl ValueLocation {
                 format!("  la t0, {}\n  sw {}, 0(t0)", name, r)
             }
             Self::Stack(addr) => {
-                format!("  la t0, {}\n  lw t1, {}\n  sw t1, 0(t0)", name, addr)
+                let mut lines = String::new();
+                let addr = get_valid_address(addr, "t3", &mut lines);
+                append_line(&mut lines, &format!("  la t0, {}\n  lw t1, {}\n  sw t1, 0(t0)", name, addr));
+                lines
             }
             Self::Global(s) => {
                 format!(
@@ -95,13 +133,14 @@ impl ValueLocation {
     pub fn move_address_to_reg(&self, reg: &str) -> String {
         match self {
             Self::Stack(addr) => {
-                // `addr` has the form `offset(base)`, where `offset` is a number and `base` is a register.
-                // We need to extract `offset` and `base` from `addr`.
-                let splitted_result: Vec<&str> = addr.split(|c| c == '(' || c == ')').collect();
-                format!(
-                    "  addi {}, {}, {}",
-                    reg, splitted_result[1], splitted_result[0]
-                )
+                let Some((base, offset)) = extract_base_and_offset(addr) else {
+                    return String::new();
+                };
+                if offset < 2048 && offset >= -2048 {
+                    format!("  addi {}, {}, {}", reg, base, offset)
+                } else {
+                    format!("  li {}, {}\n  add {}, {}, {}", reg, offset, reg, base, reg)
+                }
             }
             Self::Global(s) => {
                 format!("  la {}, {}", reg, s)
