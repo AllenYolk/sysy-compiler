@@ -200,6 +200,10 @@ impl Scopes {
         self.values.len() <= 1
     }
 
+    /// Add a record of a parameter of the current function.
+    /// 
+    /// The record is stored in the `cur_func_params` field, which is a `Vec<String>`.
+    /// Each record should be a Koopa symbol name, rather than a SysY identifier.
     pub fn add_cur_func_param(&mut self, param: &str) {
         self.cur_func_params.push(param.into());
     }

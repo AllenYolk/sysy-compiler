@@ -933,9 +933,20 @@ impl KoopaTextGenerate for UnaryExp {
                     let real_param_var = if array_param[i] {
                         // If the parameter is an array, we need to pass a pointer to it.
                         // That is, we should pass the address of its first element.
-                        let new_var = tsm.new_temp_symbol();
-                        append_line(&mut param_generation_text, &format!("  {} = getelemptr {}, 0", new_var, param_var));
-                        new_var
+                        if scopes.has_cur_func_param(&param_var) {
+                            // the direct use of a function array parameter
+                            // use `load` and `getptr`
+                            let load_result = tsm.new_temp_symbol();
+                            let get_result = tsm.new_temp_symbol();
+                            append_line(&mut param_generation_text, &format!("  {} = load {}", load_result, param_var));
+                            append_line(&mut param_generation_text, &format!("  {} = getptr {}, 0", get_result, load_result));
+                            get_result
+                        } else { 
+                            // use `getelemptr`
+                            let new_var = tsm.new_temp_symbol();
+                            append_line(&mut param_generation_text, &format!("  {} = getelemptr {}, 0", new_var, param_var));
+                            new_var
+                        }
                     } else {
                         // scalar function parameter
                         param_var

@@ -1,3 +1,5 @@
+global @n_1 = alloc i32, zeroinit
+ 
 decl @getint(): i32
 
 decl @getch(): i32
@@ -14,143 +16,248 @@ decl @starttime()
 
 decl @stoptime()
 
-fun @f(%0: *[i32, 5]): i32 {
+fun @QuickSort(%0: *i32, %1: i32, %2: i32): i32 {
 %entry_1:
-  @arr_1 = alloc *[i32, 5]
+  @arr_1 = alloc *i32
   store %0, @arr_1
-  %1 = load @arr_1
-  %array_ptr_1 = getptr %1, 1
-  %array_ptr_2 = getelemptr %array_ptr_1, 2
-  %2 = load %array_ptr_2
-  ret %2
+  @low_1 = alloc i32
+  store %1, @low_1
+  @high_1 = alloc i32
+  store %2, @high_1
+  %3 = load @low_1
+  %4 = load @high_1
+  %5 = lt %3, %4
+  br %5, %if_then_1, %if_else_1
+
+%if_then_1:
+  @i_1 = alloc i32
+  %6 = load @low_1
+  store %6, @i_1
+  @j_1 = alloc i32
+  %7 = load @high_1
+  store %7, @j_1
+  @k_1 = alloc i32
+  %8 = load @low_1
+  %9 = load @arr_1
+  %array_ptr_1 = getptr %9, %8
+  %10 = load %array_ptr_1
+  store %10, @k_1
+  jump %while_entry_1
+
+%while_entry_1:
+  %11 = load @i_1
+  %12 = load @j_1
+  %13 = lt %11, %12
+  br %13, %while_body_1, %while_end_1
+
+%while_body_1:
+  jump %while_entry_2
+
+%while_entry_2:
+  %and_1 = alloc i32
+  %14 = load @i_1
+  %15 = load @j_1
+  %16 = lt %14, %15
+  %17 = ne %16, 0
+  store %17, %and_1
+  br %17, %and_rhs_1, %and_end_1
+
+%and_rhs_1:
+  %18 = load @j_1
+  %19 = load @arr_1
+  %array_ptr_2 = getptr %19, %18
+  %20 = load %array_ptr_2
+  %21 = load @k_1
+  %22 = sub %21, 1
+  %23 = gt %20, %22
+  %24 = ne %23, 0
+  store %24, %and_1
+  jump %and_end_1
+
+%and_end_1:
+  %25 = load %and_1
+  br %25, %while_body_2, %while_end_2
+
+%while_body_2:
+  %26 = load @j_1
+  %27 = sub %26, 1
+  store %27, @j_1
+  jump %while_entry_2
+
+%while_end_2:
+  %28 = load @i_1
+  %29 = load @j_1
+  %30 = lt %28, %29
+  br %30, %if_then_2, %if_else_2
+
+%if_then_2:
+  %31 = load @i_1
+  %32 = load @arr_1
+  %array_ptr_3 = getptr %32, %31
+  %33 = load @j_1
+  %34 = load @arr_1
+  %array_ptr_4 = getptr %34, %33
+  %35 = load %array_ptr_4
+  store %35, %array_ptr_3
+  %36 = load @i_1
+  %37 = add %36, 1
+  store %37, @i_1
+  jump %if_end_2
+
+%if_else_2:
+  jump %if_end_2
+
+%if_end_2:
+  jump %while_entry_3
+
+%while_entry_3:
+  %and_2 = alloc i32
+  %38 = load @i_1
+  %39 = load @j_1
+  %40 = lt %38, %39
+  %41 = ne %40, 0
+  store %41, %and_2
+  br %41, %and_rhs_2, %and_end_2
+
+%and_rhs_2:
+  %42 = load @i_1
+  %43 = load @arr_1
+  %array_ptr_5 = getptr %43, %42
+  %44 = load %array_ptr_5
+  %45 = load @k_1
+  %46 = lt %44, %45
+  %47 = ne %46, 0
+  store %47, %and_2
+  jump %and_end_2
+
+%and_end_2:
+  %48 = load %and_2
+  br %48, %while_body_3, %while_end_3
+
+%while_body_3:
+  %49 = load @i_1
+  %50 = add %49, 1
+  store %50, @i_1
+  jump %while_entry_3
+
+%while_end_3:
+  %51 = load @i_1
+  %52 = load @j_1
+  %53 = lt %51, %52
+  br %53, %if_then_3, %if_else_3
+
+%if_then_3:
+  %54 = load @j_1
+  %55 = load @arr_1
+  %array_ptr_6 = getptr %55, %54
+  %56 = load @i_1
+  %57 = load @arr_1
+  %array_ptr_7 = getptr %57, %56
+  %58 = load %array_ptr_7
+  store %58, %array_ptr_6
+  %59 = load @j_1
+  %60 = sub %59, 1
+  store %60, @j_1
+  jump %if_end_3
+
+%if_else_3:
+  jump %if_end_3
+
+%if_end_3:
+  jump %while_entry_1
+
+%while_end_1:
+  %61 = load @i_1
+  %62 = load @arr_1
+  %array_ptr_8 = getptr %62, %61
+  %63 = load @k_1
+  store %63, %array_ptr_8
+  @tmp_1 = alloc i32
+  %64 = load @i_1
+  %65 = sub %64, 1
+  store %65, @tmp_1
+  %66 = load @arr_1
+  %67 = getptr %66, 0
+  %68 = load @low_1
+  %69 = load @tmp_1
+  %70 = call @QuickSort(%67, %68, %69)
+  store %70, @tmp_1
+  %71 = load @i_1
+  %72 = add %71, 1
+  store %72, @tmp_1
+  %73 = load @arr_1
+  %74 = getptr %73, 0
+  %75 = load @tmp_1
+  %76 = load @high_1
+  %77 = call @QuickSort(%74, %75, %76)
+  store %77, @tmp_1
+  jump %if_end_1
+
+%if_else_1:
+  jump %if_end_1
+
+%if_end_1:
+  ret 0
 }
  
 fun @main(): i32 {
 %entry_2:
-  @arr_2 = alloc [[[i32, 5], 3], 2]
-  %array_ptr_3 = getelemptr @arr_2, 0
-  %array_ptr_4 = getelemptr %array_ptr_3, 0
-  %array_ptr_5 = getelemptr %array_ptr_4, 0
-  store 0, %array_ptr_5
-  %array_ptr_6 = getelemptr @arr_2, 0
-  %array_ptr_7 = getelemptr %array_ptr_6, 0
-  %array_ptr_8 = getelemptr %array_ptr_7, 1
-  store 1, %array_ptr_8
-  %array_ptr_9 = getelemptr @arr_2, 0
-  %array_ptr_10 = getelemptr %array_ptr_9, 0
-  %array_ptr_11 = getelemptr %array_ptr_10, 2
-  store 2, %array_ptr_11
-  %array_ptr_12 = getelemptr @arr_2, 0
-  %array_ptr_13 = getelemptr %array_ptr_12, 0
-  %array_ptr_14 = getelemptr %array_ptr_13, 3
-  store 3, %array_ptr_14
-  %array_ptr_15 = getelemptr @arr_2, 0
-  %array_ptr_16 = getelemptr %array_ptr_15, 0
-  %array_ptr_17 = getelemptr %array_ptr_16, 4
-  store 4, %array_ptr_17
-  %array_ptr_18 = getelemptr @arr_2, 0
-  %array_ptr_19 = getelemptr %array_ptr_18, 1
-  %array_ptr_20 = getelemptr %array_ptr_19, 0
-  store 5, %array_ptr_20
-  %array_ptr_21 = getelemptr @arr_2, 0
-  %array_ptr_22 = getelemptr %array_ptr_21, 1
-  %array_ptr_23 = getelemptr %array_ptr_22, 1
-  store 6, %array_ptr_23
-  %array_ptr_24 = getelemptr @arr_2, 0
-  %array_ptr_25 = getelemptr %array_ptr_24, 1
-  %array_ptr_26 = getelemptr %array_ptr_25, 2
-  store 0, %array_ptr_26
-  %array_ptr_27 = getelemptr @arr_2, 0
-  %array_ptr_28 = getelemptr %array_ptr_27, 1
-  %array_ptr_29 = getelemptr %array_ptr_28, 3
-  store 0, %array_ptr_29
-  %array_ptr_30 = getelemptr @arr_2, 0
-  %array_ptr_31 = getelemptr %array_ptr_30, 1
-  %array_ptr_32 = getelemptr %array_ptr_31, 4
-  store 0, %array_ptr_32
-  %array_ptr_33 = getelemptr @arr_2, 0
-  %array_ptr_34 = getelemptr %array_ptr_33, 2
-  %array_ptr_35 = getelemptr %array_ptr_34, 0
-  store 7, %array_ptr_35
-  %array_ptr_36 = getelemptr @arr_2, 0
-  %array_ptr_37 = getelemptr %array_ptr_36, 2
-  %array_ptr_38 = getelemptr %array_ptr_37, 1
-  store 0, %array_ptr_38
-  %array_ptr_39 = getelemptr @arr_2, 0
-  %array_ptr_40 = getelemptr %array_ptr_39, 2
-  %array_ptr_41 = getelemptr %array_ptr_40, 2
-  store 0, %array_ptr_41
-  %array_ptr_42 = getelemptr @arr_2, 0
-  %array_ptr_43 = getelemptr %array_ptr_42, 2
-  %array_ptr_44 = getelemptr %array_ptr_43, 3
-  store 0, %array_ptr_44
-  %array_ptr_45 = getelemptr @arr_2, 0
-  %array_ptr_46 = getelemptr %array_ptr_45, 2
-  %array_ptr_47 = getelemptr %array_ptr_46, 4
-  store 0, %array_ptr_47
-  %array_ptr_48 = getelemptr @arr_2, 1
-  %array_ptr_49 = getelemptr %array_ptr_48, 0
-  %array_ptr_50 = getelemptr %array_ptr_49, 0
-  store 0, %array_ptr_50
-  %array_ptr_51 = getelemptr @arr_2, 1
-  %array_ptr_52 = getelemptr %array_ptr_51, 0
-  %array_ptr_53 = getelemptr %array_ptr_52, 1
-  store 0, %array_ptr_53
-  %array_ptr_54 = getelemptr @arr_2, 1
-  %array_ptr_55 = getelemptr %array_ptr_54, 0
-  %array_ptr_56 = getelemptr %array_ptr_55, 2
-  store 0, %array_ptr_56
-  %array_ptr_57 = getelemptr @arr_2, 1
-  %array_ptr_58 = getelemptr %array_ptr_57, 0
-  %array_ptr_59 = getelemptr %array_ptr_58, 3
-  store 0, %array_ptr_59
-  %array_ptr_60 = getelemptr @arr_2, 1
-  %array_ptr_61 = getelemptr %array_ptr_60, 0
-  %array_ptr_62 = getelemptr %array_ptr_61, 4
-  store 0, %array_ptr_62
-  %array_ptr_63 = getelemptr @arr_2, 1
-  %array_ptr_64 = getelemptr %array_ptr_63, 1
-  %array_ptr_65 = getelemptr %array_ptr_64, 0
-  store 0, %array_ptr_65
-  %array_ptr_66 = getelemptr @arr_2, 1
-  %array_ptr_67 = getelemptr %array_ptr_66, 1
-  %array_ptr_68 = getelemptr %array_ptr_67, 1
-  store 0, %array_ptr_68
-  %array_ptr_69 = getelemptr @arr_2, 1
-  %array_ptr_70 = getelemptr %array_ptr_69, 1
-  %array_ptr_71 = getelemptr %array_ptr_70, 2
-  store 0, %array_ptr_71
-  %array_ptr_72 = getelemptr @arr_2, 1
-  %array_ptr_73 = getelemptr %array_ptr_72, 1
-  %array_ptr_74 = getelemptr %array_ptr_73, 3
-  store 0, %array_ptr_74
-  %array_ptr_75 = getelemptr @arr_2, 1
-  %array_ptr_76 = getelemptr %array_ptr_75, 1
-  %array_ptr_77 = getelemptr %array_ptr_76, 4
-  store 0, %array_ptr_77
-  %array_ptr_78 = getelemptr @arr_2, 1
-  %array_ptr_79 = getelemptr %array_ptr_78, 2
-  %array_ptr_80 = getelemptr %array_ptr_79, 0
-  store 0, %array_ptr_80
-  %array_ptr_81 = getelemptr @arr_2, 1
-  %array_ptr_82 = getelemptr %array_ptr_81, 2
-  %array_ptr_83 = getelemptr %array_ptr_82, 1
-  store 0, %array_ptr_83
-  %array_ptr_84 = getelemptr @arr_2, 1
-  %array_ptr_85 = getelemptr %array_ptr_84, 2
-  %array_ptr_86 = getelemptr %array_ptr_85, 2
-  store 0, %array_ptr_86
-  %array_ptr_87 = getelemptr @arr_2, 1
-  %array_ptr_88 = getelemptr %array_ptr_87, 2
-  %array_ptr_89 = getelemptr %array_ptr_88, 3
-  store 0, %array_ptr_89
-  %array_ptr_90 = getelemptr @arr_2, 1
-  %array_ptr_91 = getelemptr %array_ptr_90, 2
-  %array_ptr_92 = getelemptr %array_ptr_91, 4
-  store 0, %array_ptr_92
-  %array_ptr_93 = getelemptr @arr_2, 0
-  %3 = getelemptr %array_ptr_93, 0
-  %4 = call @f(%3)
-  ret %4
+  store 10, @n_1
+  @a_1 = alloc [i32, 10]
+  %array_ptr_9 = getelemptr @a_1, 0
+  store 4, %array_ptr_9
+  %array_ptr_10 = getelemptr @a_1, 1
+  store 3, %array_ptr_10
+  %array_ptr_11 = getelemptr @a_1, 2
+  store 9, %array_ptr_11
+  %array_ptr_12 = getelemptr @a_1, 3
+  store 2, %array_ptr_12
+  %array_ptr_13 = getelemptr @a_1, 4
+  store 0, %array_ptr_13
+  %array_ptr_14 = getelemptr @a_1, 5
+  store 1, %array_ptr_14
+  %array_ptr_15 = getelemptr @a_1, 6
+  store 6, %array_ptr_15
+  %array_ptr_16 = getelemptr @a_1, 7
+  store 5, %array_ptr_16
+  %array_ptr_17 = getelemptr @a_1, 8
+  store 7, %array_ptr_17
+  %array_ptr_18 = getelemptr @a_1, 9
+  store 8, %array_ptr_18
+  @i_2 = alloc i32
+  store 0, @i_2
+  @tmp_2 = alloc i32
+  store 9, @tmp_2
+  %78 = getelemptr @a_1, 0
+  %79 = load @i_2
+  %80 = load @tmp_2
+  %81 = call @QuickSort(%78, %79, %80)
+  store %81, @i_2
+  jump %while_entry_4
+
+%while_entry_4:
+  %82 = load @i_2
+  %83 = load @n_1
+  %84 = lt %82, %83
+  br %84, %while_body_4, %while_end_4
+
+%while_body_4:
+  @tmp_3 = alloc i32
+  %85 = load @i_2
+  %array_ptr_19 = getelemptr @a_1, %85
+  %86 = load %array_ptr_19
+  store %86, @tmp_3
+  %87 = load @tmp_3
+  call @putint(%87)
+  store 10, @tmp_3
+  %88 = load @tmp_3
+  call @putch(%88)
+  %89 = load @i_2
+  %90 = add %89, 1
+  store %90, @i_2
+  jump %while_entry_4
+
+%while_end_4:
+  ret 0
 }
  
