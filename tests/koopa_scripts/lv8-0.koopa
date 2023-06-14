@@ -15,7 +15,7 @@ decl @starttime()
 decl @stoptime()
 
 fun @half(%0: i32): i32 {
-%entry:
+%entry_1:
   @x_1 = alloc i32
   store %0, @x_1
   %1 = load @x_1
@@ -24,12 +24,12 @@ fun @half(%0: i32): i32 {
 }
  
 fun @f() {
-%entry:
+%entry_2:
   ret
 }
  
 fun @main(): i32 {
-%entry:
+%entry_3:
   call @f()
   %3 = call @half(10)
   ret %3

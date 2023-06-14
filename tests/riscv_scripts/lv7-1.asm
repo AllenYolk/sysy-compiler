@@ -2,7 +2,7 @@
   .globl main
 main:
   addi sp, sp, -64
-entry:
+entry_1:
   li t0, 0
   sw t0, 0(sp)
   li t0, 1

@@ -17,7 +17,7 @@ decl @starttime()
 decl @stoptime()
 
 fun @main(): i32 {
-%entry:
+%entry_1:
   @arr_1 = alloc [[i32, 3], 2]
   %array_ptr_1 = getelemptr @arr_1, 0
   %array_ptr_2 = getelemptr %array_ptr_1, 0

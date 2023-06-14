@@ -3,7 +3,7 @@
 main:
   addi sp, sp, -16
   sw ra, 12(sp)
-entry:
+entry_1:
   call getint
   sw a0, 0(sp)
   lw a0, 0(sp)

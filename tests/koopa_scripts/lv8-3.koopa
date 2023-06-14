@@ -18,7 +18,7 @@ decl @starttime()
 decl @stoptime()
 
 fun @main(): i32 {
-%entry:
+%entry_1:
   @x_1 = alloc i32
   store 3, @x_1
   store 4, @var_1

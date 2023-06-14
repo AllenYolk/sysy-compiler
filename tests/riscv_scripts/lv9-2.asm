@@ -15,7 +15,7 @@ a_1:
   .globl main
 main:
   addi sp, sp, -96
-entry:
+entry_1:
   addi t0, sp, 0
   li t1, 0
   li t2, 12

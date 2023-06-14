@@ -2,7 +2,7 @@
   .globl half_add
 half_add:
   addi sp, sp, -32
-entry:
+entry_1:
   sw a0, 0(sp)
   sw a1, 4(sp)
   lw t0, 0(sp)
@@ -26,7 +26,7 @@ entry:
 ff:
   addi sp, sp, -48
   sw ra, 44(sp)
-entry:
+entry_2:
   sw a0, 0(sp)
   lw t0, 0(sp)
   sw t0, 8(sp)
@@ -69,7 +69,7 @@ if_end_1:
   .globl gg
 gg:
   addi sp, sp, -128
-entry:
+entry_3:
   sw a0, 0(sp)
   sw a1, 4(sp)
   sw a2, 8(sp)
@@ -151,7 +151,7 @@ entry:
 main:
   addi sp, sp, -32
   sw ra, 28(sp)
-entry:
+entry_4:
   li t0, 5
   li t1, 2
   mul t0, t0, t1

@@ -15,7 +15,7 @@ decl @starttime()
 decl @stoptime()
 
 fun @main(): i32 {
-%entry:
+%entry_1:
   %and_1 = alloc i32
   %0 = eq 0, 3
   %1 = ne %0, 0

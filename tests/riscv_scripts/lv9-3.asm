@@ -2,7 +2,7 @@
   .globl f
 f:
   addi sp, sp, -32
-entry:
+entry_1:
   sw a0, 0(sp)
   lw t0, 0(sp)
   sw t0, 4(sp)
@@ -30,7 +30,7 @@ entry:
 main:
   addi sp, sp, -496
   sw ra, 492(sp)
-entry:
+entry_2:
   addi t0, sp, 0
   li t1, 0
   li t2, 60

@@ -2,7 +2,7 @@
   .globl main
 main:
   addi sp, sp, -48
-entry:
+entry_1:
   li t0, 10
   li t1, 4
   mul t0, t0, t1

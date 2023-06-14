@@ -15,7 +15,7 @@ decl @starttime()
 decl @stoptime()
 
 fun @main(): i32 {
-%entry:
+%entry_1:
   %0 = call @getint()
   ret %0
 }

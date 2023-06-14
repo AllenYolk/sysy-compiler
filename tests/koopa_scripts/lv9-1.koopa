@@ -20,7 +20,7 @@ decl @starttime()
 decl @stoptime()
 
 fun @main(): i32 {
-%entry:
+%entry_1:
   %0 = load @xx_1
   %1 = sub %0, 1
   @arr_1 = alloc [i32, 5]

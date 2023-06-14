@@ -25,7 +25,7 @@ q_1:
   .globl main
 main:
   addi sp, sp, -128
-entry:
+entry_1:
   la t0, xx_1
   lw t0, 0(t0)
   sw t0, 0(sp)

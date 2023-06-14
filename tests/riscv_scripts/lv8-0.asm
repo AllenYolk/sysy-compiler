@@ -2,7 +2,7 @@
   .globl half
 half:
   addi sp, sp, -16
-entry:
+entry_1:
   sw a0, 0(sp)
   lw t0, 0(sp)
   sw t0, 4(sp)
@@ -18,7 +18,7 @@ entry:
   .globl f
 f:
   # no prologue
-entry:
+entry_2:
   # no epilogue
   ret
  
@@ -27,7 +27,7 @@ entry:
 main:
   addi sp, sp, -16
   sw ra, 12(sp)
-entry:
+entry_3:
   call f
   li a0, 10
   call half

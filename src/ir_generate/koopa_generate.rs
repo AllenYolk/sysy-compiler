@@ -148,6 +148,8 @@ impl KoopaTextGenerate for FuncDef {
         // function body
         let mut body_text = String::new();
         self.block.generate(&mut body_text, scopes, tsm, nsc)?;
+
+        // Return statements
         // 1. If there's no `ret` instruction in the function body, we only need to add one at the last line.
         // 2. Only when the return type is `void` can the `ret` instruction be omitted by the original function body.
         let Some(last_line) = body_text.split("\n").last() else {
@@ -166,7 +168,7 @@ impl KoopaTextGenerate for FuncDef {
             lines,
             &format!("fun {}({}){} {{", func_name, param_text, ft),
         );
-        append_line(lines, "%entry:");
+        append_line(lines, &format!("{}:", &nsc.inc_and_get_named_symbol("%entry")?));
         append_line(lines, &func_param_reallocation_text);
         append_line(lines, &body_text);
         append_line(lines, "}");

@@ -15,7 +15,7 @@ decl @starttime()
 decl @stoptime()
 
 fun @half_add(%0: i32, %1: i32): i32 {
-%entry:
+%entry_1:
   @x_1 = alloc i32
   store %0, @x_1
   @y_1 = alloc i32
@@ -28,7 +28,7 @@ fun @half_add(%0: i32, %1: i32): i32 {
 }
  
 fun @ff(%6: i32) {
-%entry:
+%entry_2:
   @x_2 = alloc i32
   store %6, @x_2
   @y_2 = alloc i32
@@ -55,7 +55,7 @@ fun @ff(%6: i32) {
 }
  
 fun @gg(%13: i32, %14: i32, %15: i32, %16: i32, %17: i32, %18: i32, %19: i32, %20: i32, %21: i32, %22: i32): i32 {
-%entry:
+%entry_3:
   @a_1 = alloc i32
   store %13, @a_1
   @b_1 = alloc i32
@@ -102,7 +102,7 @@ fun @gg(%13: i32, %14: i32, %15: i32, %16: i32, %17: i32, %18: i32, %19: i32, %2
 }
  
 fun @main(): i32 {
-%entry:
+%entry_4:
   %43 = mul 5, 2
   %44 = add 3, %43
   call @ff(%44)
