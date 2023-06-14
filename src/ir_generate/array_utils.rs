@@ -9,6 +9,9 @@ use crate::tools::*;
 /// Generate the type of an array used in `alloc` instructions.
 pub fn generate_allocate_dims(dims: &[i32], i: usize) -> String {
     let l = dims.len();
+    if l == 0usize {
+        return String::from("i32");
+    }
     if i == l - 1 {
         format!("[i32, {}]", dims[i])
     } else {
