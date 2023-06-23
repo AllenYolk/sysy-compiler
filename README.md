@@ -20,6 +20,12 @@ For more information, see the [report](./lab-report.md) (written in Chinese 🫡
   * SysY to RISC-V: **98.64** / 100
   * Performance: **100** / 100 (598.74 sec 😋👉🤡)
 
+## Notices
+
+* **Disclaimer**: for your own benefit, please avoid directly copying and pasting the code 🙏.
+* If you find my code or idea helpful, please consider citing this repository in your lab report or code 😘.
+  * ...... and star ⭐️ the repo if you like!
+
 ## References
 
 * [Kira (Rust version)](https://github.com/pku-minic/kira-rs)
