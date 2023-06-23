@@ -26,7 +26,7 @@
 * **应用层**：`src/main.rs` 负责解析命令行参数，并给出一些最简单的报错信息（指出错误发生在哪一阶段）
 * **核心层**：`src/lib.rs` 及其他文件实现了编译器的核心功能，主要含3个模块：
 	* `ast_generate`：词法分析，语法分析，语义分析，生成抽象语法树
-	* `ir_generate`：遍历抽象语法树，得到 Koopa 中间表示（==文本形式==）；调用接口，将文字形式的 Koopa 转换成 [`koopa` crate](https://crates.io/crates/koopa) 定义的数据结构。
+	* `ir_generate`：遍历抽象语法树，得到 Koopa 中间表示（**文本形式**）；调用接口，将文字形式的 Koopa 转换成 [`koopa` crate](https://crates.io/crates/koopa) 定义的数据结构。
 	* `target_generate`：遍历 Koopa 数据结构，得到 RISC-V 程序（文本形式）
 
 
@@ -446,7 +446,7 @@ OpenStmt: Stmt = {
 
 注意：只需要改 lalrpop 的分析过程，不需要更改 AST 元素的定义！
 
-从这里开始，Koopa 的每个函数就可能由==多个基本块==组成了。注意，==每个 Koopa 基本块的结尾必须有跳转或返回语句，而且这类语句必须位于基本块结束位置==。因此，处于函数中间位置的return语句后会开启一个新的基本块，但位于函数最后的return语句则不会开启新基本块。我的处理方法是，默认在return语句后产生一个基本块：
+从这里开始，Koopa 的每个函数就可能由多个基本块组成了。注意，**每个 Koopa 基本块的结尾必须有跳转或返回语句，而且这类语句必须位于基本块结束位置**。因此，处于函数中间位置的return语句后会开启一个新的基本块，但位于函数最后的return语句则不会开启新基本块。我的处理方法是，默认在return语句后产生一个基本块：
 
 ```rust
 impl KoopaTextGenerate for Stmt {
@@ -571,7 +571,7 @@ pub struct Scopes {
 
 在这个结构的帮助下，在 Koopa 文本中调用函数就没有困难了。
 
-在 `target_generate` 阶段，难点在于函数栈帧的设置。正如上文所述，我的编译器会在翻译函数前先扫描一遍函数；经历这个过程后，函数的==栈帧大小、局部变量存储位置和返回值存储位置就完全确定==了。函数扫描的过程和结果的数据结构在 `src/target_generate/function_scan.rs` 中定义，章节 2.2.2 有做过展示。
+在 `target_generate` 阶段，难点在于函数栈帧的设置。正如上文所述，我的编译器会在翻译函数前先扫描一遍函数；经历这个过程后，函数的**栈帧大小、局部变量存储位置和返回值存储位置就完全确定**了。函数扫描的过程和结果的数据结构在 `src/target_generate/function_scan.rs` 中定义，章节 2.2.2 有做过展示。
 
 读写当前函数参数或给即将调用的函数传参时，可以用 `src/target_generate/function_call.rs` 中的这个函数来找到参数位置：
 ```rust
